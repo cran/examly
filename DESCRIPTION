@@ -1,6 +1,6 @@
 Package: examly
 Title: Statistical Metrics and Reporting Tool
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: 
     c(person(given = "Ahmet", family = "Çalışkan", 
              email = "ahmetcaliskan1987@gmail.com", role = c("aut","cre")),
@@ -10,8 +10,8 @@ Description: A 'Shiny'-based toolkit for item/test analysis. It is designed for 
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1)
-Imports: shiny, dplyr, tidyr, purrr, stringr, readr, readxl, officer,
-        flextable, glue, magrittr, jsonlite, tibble, htmltools
+Imports: shiny, dplyr, ggplot2, tidyr, purrr, stringr, readr, readxl,
+        officer, flextable, glue, magrittr, jsonlite, tibble, htmltools
 Suggests: testthat (>= 3.0.0), knitr, rmarkdown, spelling, psychometric
 VignetteBuilder: knitr
 Config/testthat/edition: 3
@@ -20,9 +20,9 @@ BugReports: https://github.com/ahmetcaliskan1987/examly/issues
 RoxygenNote: 7.3.3
 Language: en-US
 NeedsCompilation: no
-Packaged: 2025-11-06 19:35:12 UTC; ahmetcaliskan
+Packaged: 2025-11-13 11:58:55 UTC; ahmetcaliskan
 Author: Ahmet Çalışkan [aut, cre],
   Abdullah Faruk Kılıç [aut]
 Maintainer: Ahmet Çalışkan <ahmetcaliskan1987@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-11-11 21:30:02 UTC
+Date/Publication: 2025-11-13 17:40:24 UTC

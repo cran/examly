@@ -4,7 +4,7 @@ library(dplyr); library(tidyr); library(purrr); library(stringr)
 library(readr); library(readxl)
 library(officer); library(flextable); library(glue)
 library(magrittr)
-
+library(ggplot2)
 
 title_default <- "Sınav Başlığı"
 
@@ -179,6 +179,9 @@ ui <- navbarPage(
     fluidPage(
       h3(textOutput("title_display8")),
       uiOutput("distractor_item_picker"),
+      tags$hr(),
+      h4(textOutput("distractor_highlights_header")),
+      uiOutput("distractor_highlights_ui"),
       hr(), h4(textOutput("distractor_comment_hdr")),
       verbatimTextOutput("distractor_comment"),
       hr(), h4(textOutput("distractor_table_hdr")),
@@ -190,7 +193,11 @@ ui <- navbarPage(
     title = textOutput("tab_student_results", container = span),
     fluidPage(
       h3(textOutput("title_display5")),
-      uiOutput("student_table_html")
+      uiOutput("student_table_html"),
+      tags$hr(),
+      h4(textOutput("student_summary_header", container = span)),
+      uiOutput("student_summary_text_ui"),
+      plotOutput("student_grade_plot", height = "400px")
     )
   ),
 
@@ -261,6 +268,7 @@ server <- function(input, output, session) {
   output$what_it_means_items<- renderText({ T_("WhatItMeans", "Ne anlama geliyor?") })
   output$tab_distractor         <- renderText( T_("Distractor", "Çeldirici Analizi") )
   output$distractor_comment_hdr <- renderText( T_("DistractorCommentHeader", "Yorum") )
+  output$distractor_highlights_header <- renderText({ dict(); T_("DistractorHighlightsHeader", "Madde Özeti") })
   output$distractor_table_hdr   <- renderText( T_("DistractorTableHeader", "Seçenek Dağılımları") )
   output$tab_student_results <- renderText( T_("StudentResults", "Öğrenci Sonuçları") )
 
@@ -295,7 +303,7 @@ server <- function(input, output, session) {
       inputId = "lang",
       label   = T_("LanguageSelection", "Dil Seçimi"),
       choices = c("Türkçe" = "tr", "English" = "en"),
-      selected = input$lang %||% "tr",
+      selected <- examly::`%||%`(input$lang, "tr"),
       inline = TRUE
     )
   })
@@ -322,6 +330,8 @@ server <- function(input, output, session) {
   output$lc_header     <- renderText( T_("LCHeader","Uzun Cevaplı (Açık Uçlu) Maddeler") )
   output$lc_note       <- renderText( T_("LCNote","Not: Uzun cevaplı maddelerin veri setindeki değerleri öğrencinin o soruda aldığı puan olmalıdır.") )
   output$weights_header<- renderText( T_("WeightsHeader","Madde Puan Katsayıları (Maksimum)") )
+  output$tab_student_results <- renderText( T_("StudentResults", "Öğrenci Sonuçları") )
+  output$student_summary_header <- renderText( T_("StudentSummaryHeader", "Puan Dağılım Özeti") )
 
   observeEvent(dict(), {
     new_default <- T_("ExamTitleDefault", "Sınav Başlığı")
@@ -354,7 +364,7 @@ server <- function(input, output, session) {
         c(",", ";"),
         c(T_("Comma", "Virgül"), T_("Semicolon", "Noktalı Virgül"))
       ),
-      selected = input$sep %||% ","
+      selected <- examly::`%||%`(input$sep, ",")
     )
 
     updateSelectInput(
@@ -488,8 +498,8 @@ server <- function(input, output, session) {
   })
 
   data_items <- reactive({
-    df <- raw_data(); req(norm_cols(input$item_cols))
-    sel <- setdiff(norm_cols(input$item_cols), input$name_col)
+    df <- raw_data(); req(examly::norm_cols(input$item_cols))
+    sel <- setdiff(examly::norm_cols(input$item_cols), input$name_col)
     sel <- intersect(sel, names(df))
     if(length(sel) == 0) return(df[, 0, drop = FALSE])
     as.data.frame(df[, sel, drop=FALSE])
@@ -538,14 +548,17 @@ server <- function(input, output, session) {
   }, align = "c")
 
   mc_items_use <- reactive({
-    taken <- union(union(input$tf_items %||% character(0), input$lc_items %||% character(0)),
-                   input$bin_items %||% character(0))
-    base_cols <- norm_cols(input$item_cols) %||% character(0)
+    taken <- union(
+      union(examly::`%||%`(input$tf_items, character(0)),
+            examly::`%||%`(input$lc_items, character(0))),
+      examly::`%||%`(input$bin_items, character(0))
+    )
+    base_cols <- examly::`%||%`(examly::norm_cols(input$item_cols), character(0))
     if(!is.null(input$mc_items) && length(input$mc_items)>0) input$mc_items else setdiff(base_cols, taken)
   })
-  tf_items_use <- reactive({ input$tf_items %||% character(0) })
-  lc_items_use <- reactive({ input$lc_items %||% character(0) })
-  bin_items_use <- reactive({ input$bin_items %||% character(0) })
+  tf_items_use  <- reactive({ examly::`%||%`(input$tf_items,  character(0)) })
+  lc_items_use  <- reactive({ examly::`%||%`(input$lc_items,  character(0)) })
+  bin_items_use <- reactive({ examly::`%||%`(input$bin_items, character(0)) })
 
   output$mc_item_selector <- renderUI({
     req(input$item_cols)
@@ -633,8 +646,8 @@ server <- function(input, output, session) {
   })
 
   output$item_weight_table <- renderUI({
-    req(norm_cols(input$item_cols))
-    hdrs <- norm_cols(input$item_cols)
+    req(examly::norm_cols(input$item_cols))
+    hdrs <- examly::norm_cols(input$item_cols)
     inputs <- lapply(hdrs, function(nm){
       tagAppendAttributes(numericInput(paste0("w_", nm), NULL, value = 1, min = 0, step = 0.5, width=NULL),
                           class="grid-input-num")
@@ -646,40 +659,40 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$mc_items, {
-    mc <- input$mc_items %||% character(0)
-    tf <- input$tf_items %||% character(0)
-    lc <- input$lc_items %||% character(0)
-    bn <- input$bin_items %||% character(0)
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_tf <- setdiff(tf, mc); new_lc <- setdiff(lc, mc); new_bn <- setdiff(bn, mc)
     if(!identical(new_tf, tf)) updateCheckboxGroupInput(session, "tf_items", selected = new_tf)
     if(!identical(new_lc, lc)) updateCheckboxGroupInput(session, "lc_items", selected = new_lc)
     if(!identical(new_bn, bn)) updateCheckboxGroupInput(session, "bin_items", selected = new_bn)
   }, ignoreInit = TRUE)
   observeEvent(input$tf_items, {
-    mc <- input$mc_items %||% character(0)
-    tf <- input$tf_items %||% character(0)
-    lc <- input$lc_items %||% character(0)
-    bn <- input$bin_items %||% character(0)
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_mc <- setdiff(mc, tf); new_lc <- setdiff(lc, tf); new_bn <- setdiff(bn, tf)
     if(!identical(new_mc, mc)) updateCheckboxGroupInput(session, "mc_items", selected = new_mc)
     if(!identical(new_lc, lc)) updateCheckboxGroupInput(session, "lc_items", selected = new_lc)
     if(!identical(new_bn, bn)) updateCheckboxGroupInput(session, "bin_items", selected = new_bn)
   }, ignoreInit = TRUE)
   observeEvent(input$bin_items, {
-    mc <- input$mc_items %||% character(0)
-    tf <- input$tf_items %||% character(0)
-    lc <- input$lc_items %||% character(0)
-    bn <- input$bin_items %||% character(0)
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_mc <- setdiff(mc, bn); new_tf <- setdiff(tf, bn); new_lc <- setdiff(lc, bn)
     if(!identical(new_mc, mc)) updateCheckboxGroupInput(session, "mc_items", selected = new_mc)
     if(!identical(new_tf, tf)) updateCheckboxGroupInput(session, "tf_items", selected = new_tf)
     if(!identical(new_lc, lc)) updateCheckboxGroupInput(session, "lc_items", selected = new_lc)
   }, ignoreInit = TRUE)
   observeEvent(input$lc_items, {
-    mc <- input$mc_items %||% character(0)
-    tf <- input$tf_items %||% character(0)
-    lc <- input$lc_items %||% character(0)
-    bn <- input$bin_items %||% character(0)
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_mc <- setdiff(mc, lc); new_tf <- setdiff(tf, lc); new_bn <- setdiff(bn, lc)
     if(!identical(new_mc, mc)) updateCheckboxGroupInput(session, "mc_items", selected = new_mc)
     if(!identical(new_tf, tf)) updateCheckboxGroupInput(session, "tf_items", selected = new_tf)
@@ -751,7 +764,7 @@ server <- function(input, output, session) {
   })
 
   item_weights <- reactive({
-    cols <- norm_cols(input$item_cols) %||% character(0)
+    cols <- examly::`%||%`(examly::norm_cols(input$item_cols), character(0))
     w <- setNames(rep(1, length(cols)), cols)
     for(nm in cols){
       v <- suppressWarnings(as.numeric(input[[paste0("w_", nm)]]))
@@ -763,42 +776,42 @@ server <- function(input, output, session) {
 
   scored_items <- reactive({
     df <- data_items(); keys <- answer_keys()
-    if(is.null(df) || (length(norm_cols(input$item_cols) %||% character(0))==0)) return(NULL)
+    if (is.null(df) || (length(examly::`%||%`(examly::norm_cols(input$item_cols), character(0))) == 0)) return(NULL)
 
-    all_names <- norm_cols(input$item_cols)
+    all_names <- examly::norm_cols(input$item_cols)
     sc_bin <- matrix(NA_real_, nrow=nrow(df), ncol=length(all_names), dimnames=list(NULL, all_names)) %>% as.data.frame()
     lc_raw <- matrix(NA_real_, nrow=nrow(df), ncol=length(all_names), dimnames=list(NULL, all_names)) %>% as.data.frame()
 
     for(nm in lc_items_use()){
       if(nm %in% names(df)){
-        lc_raw[[nm]] <- parse_lc_raw(df[[nm]])
+        lc_raw[[nm]] <- examly::parse_lc_raw(df[[nm]])
         sc_bin[[nm]] <- NA_real_
       }
     }
 
     for(nm in bin_items_use()){
       if(nm %in% names(df)){
-        sc_bin[[nm]] <- parse_lc_bin(df[[nm]])
+        sc_bin[[nm]] <- examly::parse_lc_bin(df[[nm]])
       }
     }
 
     for(nm in setdiff(all_names, union(union(mc_items_use(), tf_items_use()),
                                        union(lc_items_use(), bin_items_use())))){
       col <- df[[nm]]
-      if(is_scored_01(col)){
-        sc_bin[[nm]] <- parse_lc_bin(col)
+      if(examly::is_scored_01(col)){
+        sc_bin[[nm]] <- examly::parse_lc_bin(col)
       }
     }
 
     for(nm in names(keys$mc)){
       if(isTruthy(keys$mc[[nm]]) && nm %in% names(df)){
-        sc_bin[[nm]] <- parse_mc_bin(df[[nm]], keys$mc[[nm]])
+        sc_bin[[nm]] <- examly::parse_mc_bin(df[[nm]], keys$mc[[nm]])
       }
     }
 
     for(nm in names(keys$tf)){
       if(isTruthy(keys$tf[[nm]]) && nm %in% names(df)){
-        sc_bin[[nm]] <- parse_tf_bin(df[[nm]], keys$tf[[nm]])
+        sc_bin[[nm]] <- examly::parse_tf_bin(df[[nm]], keys$tf[[nm]])
       }
     }
 
@@ -823,7 +836,7 @@ server <- function(input, output, session) {
     }
     NULL
   })
-  itemexam_quant_reactive <- reactive({ get_itemexam_quant() })
+  itemexam_quant_reactive <- reactive({ examly::get_itemexam_quant() })
 
   test_summary <- reactive({
     dict()
@@ -836,7 +849,7 @@ server <- function(input, output, session) {
 
     w <- item_weights()
     all_items <- colnames(sc_bin)
-    w_use <- w[all_items] %||% rep(1, length(all_items))
+    w_use <- examly::`%||%`(w[all_items], rep(1, length(all_items)))
     names(w_use) <- all_items
 
     Y <- as.data.frame(matrix(NA_real_, nrow = n_stu, ncol = length(all_items), dimnames = list(NULL, all_items)))
@@ -874,7 +887,7 @@ server <- function(input, output, session) {
     rjx <- sapply(seq_len(ncol(Y)), function(j){
       yj <- Y[[j]]
       if(all(is.na(yj))) return(NA_real_)
-      pbiserial_rest(yj, weighted_total - ifelse(is.na(yj), 0, yj))
+      examly::pbiserial_rest(yj, weighted_total - ifelse(is.na(yj), 0, yj))
     })
     names(rjx) <- all_items
 
@@ -885,7 +898,7 @@ server <- function(input, output, session) {
     alpha <- if (k_eff > 1 && !is.na(var_total) && var_total > 0) (k_eff/(k_eff - 1)) * (1 - sum(col_vars, na.rm = TRUE)/var_total) else NA_real_
 
     only_dicho <- sc_bin[, intersect(colnames(sc_bin), union(mc_tf_bin_names, other_names)), drop = FALSE]
-    kr20_val <- if(length(lc_names)==0 && all(w_use[union(mc_tf_bin_names, other_names)]==1, na.rm=TRUE)) kr20(only_dicho) else NA_real_
+    kr20_val <- if(length(lc_names)==0 && all(w_use[union(mc_tf_bin_names, other_names)]==1, na.rm=TRUE)) examly::kr20(only_dicho) else NA_real_
 
     q <- itemexam_quant_reactive(); k <- max(1, floor(n_stu * q))
     ord <- order(weighted_total)
@@ -895,7 +908,7 @@ server <- function(input, output, session) {
     list(
       n_stu = n_stu,
       median = stats::median(weighted_total, na.rm=TRUE),
-      mode   = suppressWarnings(d_mode(weighted_total)),
+      mode   = suppressWarnings(examly::d_mode(weighted_total)),
       mean   = mean(weighted_total, na.rm=TRUE),
       sd     = stats::sd(weighted_total, na.rm=TRUE),
       avg_p  = mean(p_all[!is.na(p_all)], na.rm=TRUE),
@@ -914,6 +927,77 @@ server <- function(input, output, session) {
       max_weighted = max_weighted,
       weights = w_use,
       k_group = k, q = q
+    )
+  })
+
+  student_scores_processed <- reactive({
+    dict()
+    s <- test_summary()
+    validate(need(!is.null(s) && !is.null(s$weighted_total) && !is.null(s$max_weighted) && s$max_weighted > 0,
+                  T_("WaitingForScores", "Puanlar hesaplanıyor veya maksimum puan 0...")))
+
+    percent_scores <- (s$weighted_total / s$max_weighted) * 100
+
+    count_pass_50 <- sum(percent_scores >= 50, na.rm = TRUE)
+
+    score_labels_i18n <- c(
+      T_("Grade.Fail", "0-49.99 Geçmez"),
+      T_("Grade.Pass", "50-59.99 Geçer"),
+      T_("Grade.Medium", "60-69.99 Orta"),
+      T_("Grade.Good", "70-84.99 İyi"),
+      T_("Grade.Excellent", "85-100 Pekiyi")
+    )
+
+    score_breaks <- c(-Inf, 49.99, 59.99, 69.99, 84.99, 100)
+
+    grades <- cut(percent_scores, breaks = score_breaks, labels = score_labels_i18n, right = TRUE)
+
+    df_grades <- data.frame(Grades = grades)
+
+    list(
+      count_pass_50 = count_pass_50,
+      n_total = length(percent_scores),
+      df_grades = df_grades,
+      grades_i18n = score_labels_i18n
+    )
+  })
+
+  item_highlights <- reactive({
+    input$lang
+    dict()
+    s <- test_summary()
+    validate(need(!is.null(s) && !is.null(s$sc_bin), T_("WaitingForScores", "Puanlar hesaplanıyor...")))
+
+    sc_bin <- s$sc_bin
+    n_total <- s$n_stu
+
+    binary_items <- setdiff(colnames(sc_bin), lc_items_use())
+
+    if (length(binary_items) == 0 || n_total == 0) {
+      return(list(most_correct = NA_character_, correct_count = 0,
+                  most_wrong = NA_character_,   wrong_count = 0,
+                  most_blank = NA_character_,   blank_count = 0,
+                  n_total = n_total))
+    }
+
+    sc_bin_binary_only <- sc_bin[, binary_items, drop = FALSE]
+
+    n_correct <- colSums(sc_bin_binary_only == 1, na.rm = TRUE)
+    n_wrong   <- colSums(sc_bin_binary_only == 0, na.rm = TRUE)
+    n_blank   <- colSums(is.na(sc_bin_binary_only), na.rm = TRUE)
+
+    item_most_correct <- if(all(is.na(n_correct)) || length(n_correct)==0 || all(n_correct == 0)) NA_character_ else names(n_correct)[which.max(n_correct)]
+    item_most_wrong   <- if(all(is.na(n_wrong)) || length(n_wrong)==0 || all(n_wrong == 0)) NA_character_ else names(n_wrong)[which.max(n_wrong)]
+    item_most_blank   <- if(all(is.na(n_blank)) || length(n_blank)==0 || all(n_blank == 0)) NA_character_ else names(n_blank)[which.max(n_blank)]
+
+    list(
+      most_correct = item_most_correct,
+      correct_count = if(is.na(item_most_correct)) 0 else n_correct[item_most_correct],
+      most_wrong = item_most_wrong,
+      wrong_count = if(is.na(item_most_wrong)) 0 else n_wrong[item_most_wrong],
+      most_blank = item_most_blank,
+      blank_count = if(is.na(item_most_blank)) 0 else n_blank[item_most_blank],
+      n_total = n_total
     )
   })
 
@@ -982,12 +1066,12 @@ server <- function(input, output, session) {
 
   output$avg_p_badge <- renderUI({
     s <- test_summary()
-    HTML(paste(T_("AvgP","Ortalama Güçlük:"), as.character(color_badge(s$avg_p, "p"))))
+    HTML(paste(T_("AvgP","Ortalama Güçlük:"), as.character(examly::color_badge(s$avg_p, "p"))))
   })
 
   output$avg_r_badge <- renderUI({
     s <- test_summary()
-    HTML(paste(T_("AvgR","Ortalama Ayırt Edicilik:"), as.character(color_badge(s$avg_r, "r"))))
+    HTML(paste(T_("AvgR","Ortalama Ayırt Edicilik:"), as.character(examly::color_badge(s$avg_r, "r"))))
   })
 
   output$weighted_mean_text <- renderText({
@@ -997,6 +1081,7 @@ server <- function(input, output, session) {
   })
 
   output$overall_comment <- renderUI({
+    dict()
     s <- test_summary()
 
     keyP <- if (is.na(s$avg_p)) NULL else if (s$avg_p < .4) "Overall_ptxt_low"
@@ -1004,8 +1089,8 @@ server <- function(input, output, session) {
     keyR <- if (is.na(s$avg_r)) NULL else if (s$avg_r < .2) "Overall_rtxt_low"
     else if (s$avg_r > .4) "Overall_rtxt_high" else "Overall_rtxt_mid"
 
-    ptxt <- T_(keyP, "")
-    rtxt <- T_(keyR, "")
+    ptxt <- if (is.null(keyP)) "" else T_(keyP, "")
+    rtxt <- if (is.null(keyR)) "" else T_(keyR, "")
 
     htmltools::HTML(paste(ptxt, rtxt, sep = "<br/>"))
   })
@@ -1024,8 +1109,8 @@ server <- function(input, output, session) {
                error = function(e) NA_real_)
     })
 
-    diff_keys <- vapply(p,     difficulty_label_key,      NA_character_)
-    disc_keys <- vapply(s$rjx, discrimination_decision_key, NA_character_)
+    diff_keys <- vapply(p,     examly::difficulty_label_key,      NA_character_)
+    disc_keys <- vapply(s$rjx, examly::discrimination_decision_key, NA_character_)
 
     diff_labels <- ifelse(is.na(diff_keys), "",
                           vapply(diff_keys, function(k) T_(k, ""), character(1)))
@@ -1073,7 +1158,7 @@ server <- function(input, output, session) {
   mc_raw_norm <- reactive({
     req(mc_items_use()); df <- data_items(); cols <- intersect(names(df), mc_items_use())
     if(length(cols)==0) return(NULL)
-    as.data.frame(lapply(cols, function(nm) norm_letter(df[[nm]])), stringsAsFactors=FALSE) %>% setNames(cols)
+    as.data.frame(lapply(cols, function(nm) examly::norm_letter(df[[nm]])), stringsAsFactors=FALSE) %>% setNames(cols)
   })
   compute_distractor <- function(item_name){
     s <- test_summary(); totals <- s$weighted_total
@@ -1123,6 +1208,42 @@ server <- function(input, output, session) {
   output$distractor_item_picker <- renderUI({
     dict(); req(mc_items_use())
     selectInput("distr_item", T_("DistractorPickItem","Madde seçin"), choices = mc_items_use())
+  })
+
+  output$distractor_highlights_ui <- renderUI({
+    dict()
+    h <- item_highlights()
+    req(h)
+
+    style_box <- "padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; margin-bottom: 8px;"
+    style_label <- "font-weight: bold; color: #333;"
+    style_value_g <- "font-weight: bold; color: #28a745;"
+    style_value_r <- "font-weight: bold; color: #dc3545;"
+    style_value_b <- "font-weight: bold; color: #6c757d;"
+
+    create_highlight_box <- function(label_key, default_label, value, count, n_total, style_val) {
+      if (is.na(value) || is.null(value)) {
+        value_str <- T_("NotApplicable", "N/A")
+        count_str <- ""
+      } else {
+        value_str <- value
+        pct_str <- if (n_total > 0) sprintf("(%.1f%%)", (count / n_total) * 100) else ""
+        count_str <- paste0(" (", count, " ", T_("CountUnit", "kişi"), ") ", pct_str)
+      }
+
+      tags$div(
+        style = style_box,
+        tags$span(style = style_label, T_(label_key, default_label), ": "),
+        tags$span(style = style_val, value_str),
+        tags$span(style="color: #555;", count_str)
+      )
+    }
+
+    tagList(
+      create_highlight_box("MostCorrectItem", "En çok doğru yapılan madde", h$most_correct, h$correct_count, h$n_total, style_value_g),
+      create_highlight_box("MostWrongItem", "En çok yanlış yapılan madde", h$most_wrong, h$wrong_count, h$n_total, style_value_r),
+      create_highlight_box("MostBlankItem", "En çok boş bırakılan madde", h$most_blank, h$blank_count, h$n_total, style_value_b)
+    )
   })
 
   output$distractor_comment <- renderText({
@@ -1192,9 +1313,9 @@ server <- function(input, output, session) {
     has_bn <- length(bnN) > 0
     has_lc <- length(lcN) > 0
 
-    cnt_mc <- if(has_mc) student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE]) else NULL
-    cnt_tf <- if(has_tf) student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE]) else NULL
-    cnt_bn <- if(has_bn) student_counts(sc_all[, intersect(colnames(sc_all), bnN), drop=FALSE]) else NULL
+    cnt_mc <- if(has_mc) examly::student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE]) else NULL
+    cnt_tf <- if(has_tf) examly::student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE]) else NULL
+    cnt_bn <- if(has_bn) examly::student_counts(sc_all[, intersect(colnames(sc_all), bnN), drop=FALSE]) else NULL
     lc_sum <- if(has_lc) rowSums(lc_all[, intersect(colnames(lc_all), lcN), drop=FALSE], na.rm=TRUE) else rep(0, nrow(sc_all))
 
     yorumlar <- purrr::map_chr(seq_len(nrow(s$sc_bin)), function(i){
@@ -1256,6 +1377,57 @@ server <- function(input, output, session) {
     )
   })
 
+  output$student_summary_text_ui <- renderUI({
+    input$lang
+    s_proc <- student_scores_processed()
+    req(s_proc)
+    dict()
+
+    pass_text <- T_("StudentsPassed50", "Ağırlıklı puana göre 50 ve üzeri alan öğrenci sayısı")
+        pct_str <- ""
+    if (s_proc$n_total > 0) {
+      pct_pass <- (s_proc$count_pass_50 / s_proc$n_total) * 100
+      pct_str <- sprintf(" (%%%.1f)", pct_pass)
+    }
+
+    tags$p(
+      style = "font-size: 16px;",
+      strong(paste0(pass_text, ": ", s_proc$count_pass_50, pct_str)),
+      " (", T_("TotalStudents", "Toplam"), ": ", s_proc$n_total, ")"
+    )
+  })
+
+  output$student_grade_plot <- renderPlot({
+    s_proc <- student_scores_processed()
+    req(s_proc, nrow(s_proc$df_grades) > 0)
+    dict()
+    df_plot <- s_proc$df_grades %>%
+      dplyr::group_by(Grades) %>%
+      dplyr::summarise(Count = n(), .groups = 'drop') %>%
+      tidyr::complete(Grades = factor(s_proc$grades_i18n, levels = s_proc$grades_i18n),
+                      fill = list(Count = 0)) %>%
+      dplyr::mutate(
+        Total = sum(Count),
+        Pct = ifelse(Total == 0, 0, Count / Total),
+        Label = ifelse(Count == 0, "", sprintf("%d\n(%.1f%%)", Count, Pct * 100))
+      )
+
+
+    ggplot(df_plot, aes(x = Grades, y = Count, fill = Grades)) +
+      geom_bar(stat = "identity", show.legend = FALSE) +
+      geom_text(aes(label = Label), vjust = -0.5, size = 4.5, lineheight = 0.9) +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+      labs(
+        title = T_("GradeDistributionTitle", "Puan Kategorilerine Göre Öğrenci Dağılımı"),
+        x = T_("GradeCategory", "Puan Kategorisi"),
+        y = T_("StudentCount", "Öğrenci Sayısı")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(axis.text.x = element_text(angle = 0, hjust = 0.5, size=12),
+            plot.title = element_text(size = 18, face = "bold"),
+            axis.title = element_text(size = 14))
+  })
+
   make_student_df <- function(s, mcN, tfN, binN, lcN, names_vec){
     dict()
 
@@ -1284,19 +1456,19 @@ server <- function(input, output, session) {
     result_list[[col_student]] <- unname(names_vec)
 
     if (has_mc) {
-      cnt_mc <- student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE])
+      cnt_mc <- examly::student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE])
       result_list[[paste(short_mc, lbl_correct)]] <- unname(cnt_mc$Dogru)
       result_list[[paste(short_mc, lbl_wrong)  ]] <- unname(cnt_mc$Yanlis)
       result_list[[paste(short_mc, lbl_blank)  ]] <- unname(cnt_mc$Bos)
     }
     if (has_tf) {
-      cnt_tf <- student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE])
+      cnt_tf <- examly::student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE])
       result_list[[paste(short_tf, lbl_correct)]] <- unname(cnt_tf$Dogru)
       result_list[[paste(short_tf, lbl_wrong)  ]] <- unname(cnt_tf$Yanlis)
       result_list[[paste(short_tf, lbl_blank)  ]] <- unname(cnt_tf$Bos)
     }
     if (has_bn) {
-      cnt_bn <- student_counts(sc_all[, intersect(colnames(sc_all), binN), drop=FALSE])
+      cnt_bn <- examly::student_counts(sc_all[, intersect(colnames(sc_all), binN), drop=FALSE])
       result_list[[paste(short_bin, lbl_correct)]] <- unname(cnt_bn$Dogru)
       result_list[[paste(short_bin, lbl_wrong)  ]] <- unname(cnt_bn$Yanlis)
       result_list[[paste(short_bin, lbl_blank)  ]] <- unname(cnt_bn$Bos)
@@ -1370,13 +1542,13 @@ server <- function(input, output, session) {
   make_summary_docx <- function(file,title,s, mcN, tfN, binN, lcN, names_vec, test_tbl,item_tbl, dlist){
     doc<-read_docx(); body_add_par(doc,title,style="heading 1")
     doc<-body_add_flextable(doc,flextable(test_tbl) %>% autofit() %>% fit_to_width(6.5))
-    body_add_par(doc,"\\nMadde İstatistikleri",style="heading 2")
-    body_add_par(doc,"\\nÖğrenci Sonuçları",style="heading 2")
+    body_add_par(doc, T_("ReportHead.ItemStats", "Madde İstatistikleri"), style="heading 2")
+    body_add_par(doc, T_("ReportHead.StudentResults", "Öğrenci Sonuçları"), style="heading 2")
     ft_students <- flextable(make_student_df(s, mcN, tfN, binN, lcN, names_vec)) %>% add_multiheader_ft()
     doc <- body_add_flextable(doc, ft_students)
 
     if(length(dlist)>0){
-      body_add_par(doc, "\\nÇeldirici Analizi (Seçenek Dağılımları)", style = "heading 2")
+      body_add_par(doc, T_("ReportHead.Distractor", "Çeldirici Analizi"), style = "heading 2")
       for(nm in names(dlist)){
         body_add_par(doc, nm, style = "heading 3")
         doc <- body_add_flextable(doc, flextable(dlist[[nm]]) %>% autofit() %>% fit_to_width(6.5))
@@ -1392,12 +1564,12 @@ server <- function(input, output, session) {
       tryCatch({
         s <- test_summary()
         if (is.null(s)) {
-          stop(T_("ReportError", "Rapor oluşturulamadı. Hata Mesajı: "), "test_summary boş.")
+          stop(T_("ReportErrorNullSummary", "Rapor oluşturulamadı: Test özeti boş."))
         }
         mcN <- mc_items_use(); tfN <- tf_items_use(); binN <- bin_items_use(); lcN <- lc_items_use()
         names_vec <- student_names()
         if (is.null(names_vec) || length(names_vec) == 0) {
-          stop(T_("ReportError", "Rapor oluşturulamadı. Hata Mesajı: "), "Öğrenci isimleri boş.")
+          stop(T_("ReportErrorNullNames", "Rapor oluşturulamadı: Öğrenci isimleri boş."))
         }
 
         df_students <- tryCatch({
@@ -1423,6 +1595,59 @@ server <- function(input, output, session) {
         ft_students <- fit_to_width(ft_students, max_width = 9.5)
 
         doc <- body_add_flextable(doc, ft_students)
+
+        s_proc <- student_scores_processed()
+        if (!is.null(s_proc)) {
+          pass_text <- T_("StudentsPassed50", "Ağırlıklı puana göre 50 ve üzeri alan öğrenci sayısı")
+          pct_str <- ""
+          if (s_proc$n_total > 0) {
+            pct_pass <- (s_proc$count_pass_50 / s_proc$n_total) * 100
+            pct_str <- sprintf(" (%%%.1f)", pct_pass)
+          }
+          summary_p_text <- paste0(
+            pass_text, ": ", s_proc$count_pass_50, pct_str,
+            " (", T_("TotalStudents", "Toplam"), ": ", s_proc$n_total, ")"
+          )
+
+          doc <- body_add_par(doc, "")
+          doc <- body_add_par(doc, summary_p_text, style = "Normal")
+        }
+
+        if (!is.null(s_proc) && nrow(s_proc$df_grades) > 0) {
+
+          df_plot <- s_proc$df_grades %>%
+            dplyr::group_by(Grades) %>%
+            dplyr::summarise(Count = n(), .groups = 'drop') %>%
+            tidyr::complete(Grades = factor(s_proc$grades_i18n, levels = s_proc$grades_i18n),
+                            fill = list(Count = 0)) %>%
+          dplyr::mutate(
+            Total = sum(Count),
+            Pct = ifelse(Total == 0, 0, Count / Total),
+            Label = ifelse(Count == 0, "", sprintf("%d\n(%.1f%%)", Count, Pct * 100))
+          )
+
+
+          p <- ggplot(df_plot, aes(x = Grades, y = Count, fill = Grades)) +
+            geom_bar(stat = "identity", show.legend = FALSE) +
+            geom_text(aes(label = Label), vjust = -0.5, size = 3.5, lineheight = 0.9) +
+            scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+            labs(
+              title = T_("GradeDistributionTitle", "Puan Kategorilerine Göre Öğrenci Dağılımı"),
+              x = T_("GradeCategory", "Puan Kategorisi"),
+              y = T_("StudentCount", "Öğrenci Sayısı")
+            ) +
+            theme_minimal(base_size = 11) +
+            theme(axis.text.x = element_text(angle = 0, hjust = 0.5))
+
+          temp_plot_file <- tempfile(fileext = ".png")
+          ggsave(temp_plot_file, plot = p, width = 8, height = 5, dpi = 150)
+
+          doc <- body_add_par(doc, "")
+          doc <- body_add_img(doc, src = temp_plot_file, width = 8, height = 5)
+
+          unlink(temp_plot_file)
+        }
+
         print(doc, target = file)
 
       }, error = function(e) {
@@ -1449,8 +1674,8 @@ server <- function(input, output, session) {
                  error = function(e) NA_real_)
       })
 
-      diff_keys <- vapply(p,     difficulty_label_key,        NA_character_)
-      disc_keys <- vapply(s$rjx, discrimination_decision_key, NA_character_)
+      diff_keys <- vapply(p,     examly::difficulty_label_key,        NA_character_)
+      disc_keys <- vapply(s$rjx, examly::discrimination_decision_key, NA_character_)
 
       diff_labels <- ifelse(is.na(diff_keys), "",
                             vapply(diff_keys, function(k) T_(k, ""), character(1)))
@@ -1490,6 +1715,33 @@ server <- function(input, output, session) {
         flextable::autofit() %>%
         flextable::fit_to_width(max_width = 9.5)
       doc <- body_add_flextable(doc, ft_items)
+      h <- item_highlights()
+      if (!is.null(h) && h$n_total > 0) {
+
+        doc <- body_add_par(doc, "")
+        doc <- body_add_par(doc, T_("DistractorHighlightsHeader", "Madde Özeti"), style = "heading 2")
+
+        create_report_line <- function(label_key, default_label, value, count, n_total) {
+          label <- T_(label_key, default_label)
+          if (is.na(value) || is.null(value)) {
+            value_str <- T_("NotApplicable", "N/A")
+            count_str <- ""
+          } else {
+            value_str <- value
+            pct_str <- sprintf("(%.1f%%)", (count / n_total) * 100)
+            count_str <- paste0(" (", count, " ", T_("CountUnit", "kişi"), ") ", pct_str)
+          }
+          paste0(label, ": ", value_str, count_str)
+        }
+
+        line1 <- create_report_line("MostCorrectItem", "En çok doğru yapılan madde", h$most_correct, h$correct_count, h$n_total)
+        line2 <- create_report_line("MostWrongItem", "En çok yanlış yapılan madde", h$most_wrong, h$wrong_count, h$n_total)
+        line3 <- create_report_line("MostBlankItem", "En çok boş bırakılan madde", h$most_blank, h$blank_count, h$n_total)
+
+        doc <- body_add_par(doc, line1, style = "Normal")
+        doc <- body_add_par(doc, line2, style = "Normal")
+        doc <- body_add_par(doc, line3, style = "Normal")
+      }
       print(doc, target = file)
     },
     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -1533,7 +1785,7 @@ server <- function(input, output, session) {
   output$dl_rapor_ozet <- downloadHandler(
     filename = function() { paste0("test_ozeti_", Sys.Date(), ".docx") },
     content = function(file) {
-      dict()  # i18n
+      dict()
       s <- test_summary(); req(s)
 
       row_labels <- c(
