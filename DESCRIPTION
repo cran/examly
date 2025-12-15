@@ -1,6 +1,6 @@
 Package: examly
 Title: Statistical Metrics and Reporting Tool
-Version: 0.1.2
+Version: 0.2.0
 Authors@R: 
     c(person(given = "Ahmet", family = "Çalışkan", 
              email = "ahmetcaliskan1987@gmail.com", role = c("aut","cre")),
@@ -20,9 +20,9 @@ BugReports: https://github.com/ahmetcaliskan1987/examly/issues
 RoxygenNote: 7.3.3
 Language: en-US
 NeedsCompilation: no
-Packaged: 2025-11-13 11:58:55 UTC; ahmetcaliskan
+Packaged: 2025-12-15 19:17:41 UTC; ahmetcaliskan
 Author: Ahmet Çalışkan [aut, cre],
   Abdullah Faruk Kılıç [aut]
 Maintainer: Ahmet Çalışkan <ahmetcaliskan1987@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-11-13 17:40:24 UTC
+Date/Publication: 2025-12-15 19:40:02 UTC

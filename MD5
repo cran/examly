@@ -1,7 +1,7 @@
-7c427c461c984ac9934c488948597a7b *DESCRIPTION
+3b9f5c5f65d3cabdea39c0cfc2d61903 *DESCRIPTION
 cfaa1d9dc081bec0d1d8145cd0c39996 *LICENSE
 924fee956eb3b2f8b6214b95950e7309 *NAMESPACE
-d4e97ec42e9180c87cdc7ed6e029c251 *NEWS.md
+44c2811f614c15c65f2613758a971163 *NEWS.md
 2cac8556516ae10d18df542d65ecfb82 *R/i18n.R
 d6ac8873e366dbcb6cbeda85e9411062 *R/run_app.R
 edb872e7ad2fbb5d98839386c39d97f5 *R/text_comments.R
@@ -13,9 +13,9 @@ b56ff2b193ecba52f9ec7f3b10cca008 *R/utils-pipe.R
 6111a40f745e9f45e0e90387cb543278 *inst/doc/examly.R
 80b893381c5554d1f839abdbf4bfa1eb *inst/doc/examly.Rmd
 1f6c85aff1d3db8cc7be314c9574608d *inst/doc/examly.html
-f7affbbf88040db524343d4a1ab6df30 *inst/shinyapp/app.R
-44ed54314cacdb15484f2e3c324a1195 *inst/shinyapp/i18n/en.json
-6187ad967a496cf5ecd32cb952add996 *inst/shinyapp/i18n/tr.json
+118affb1272ef833180107dd16a805d2 *inst/shinyapp/app.R
+925a8849391659921e44da115dc34407 *inst/shinyapp/i18n/en.json
+7714f5791960ef6aad032bf5e06058a2 *inst/shinyapp/i18n/tr.json
 ddbd7f03d16179d7b7447269d1864266 *man/color_badge.Rd
 864642422dce0e6c124bed7b6f57e1f8 *man/comment_overall_keys.Rd
 609e85257077b719262fa0bc1cf5180b *man/d_mode.Rd
