@@ -1,4 +1,8 @@
 {
+  "Theme": "Theme",
+  "ThemeClassic": "Classic",
+  "ThemeAcademic": "Academic",
+  "ThemeDark": "Dark",
   "AppTitle": "examly: Statistical Metrics and Reporting Tool",
   "LanguageSelection": "Language Selection",
   "UploadTab": "Data Upload",
@@ -206,7 +210,7 @@
   "WaitingForScores": "Calculating scores...",
   "SelectAll": "Select All",
 "DistributeWeights": "Distribute Weights Equally (100 pts)",
-"UL27Col": "Discrimination (Upper-Lower 27%)",
+"UL27Col": "Item Discrimination (Upper-Lower 27%)",
 "ReportHead.ItemStats": "Item Statistics",
 "ReportHead.Distractor": "Distractor Analysis",
 "ReportHead.Summary": "Test Summary Statistics",

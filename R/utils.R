@@ -4,7 +4,6 @@
 #' @importFrom stringr str_to_upper str_trim
 #' @importFrom tibble tibble
 #' @importFrom htmltools span
-#' @noRd
 NULL
 
 #-------------------------------------------------------------------------------
@@ -20,7 +19,7 @@ NULL
 #' @param b Right-hand side fallback.
 #' @return `a` if not `NULL`, else `b`.
 #' @keywords internal
-#' @noRd
+#' @export
 `%||%` <- function(a, b) {
   if (is.null(a)) b else a
 }
@@ -31,11 +30,16 @@ NULL
 #'
 #' @param x A vector.
 #' @return The mode of the vector. Returns NA if the vector is empty.
+#' @export
 #' @examples
 #' d_mode(c(1, 2, 2, 3, 3, 3, 4))
 #' d_mode(c("a", "b", "a"))
-#' @noRd
-d_mode <- function(x){ z <- table(x); if(length(z)==0) return(NA); as.numeric(names(z)[which.max(z)]) }
+d_mode <- function(x){
+  x <- x[!is.na(x)]
+  if (length(x) == 0) return(NA)
+  values <- unique(x)
+  values[[which.max(tabulate(match(x, values)))]]
+}
 
 #' Calculate KR-20 reliability coefficient
 #'
@@ -47,6 +51,7 @@ d_mode <- function(x){ z <- table(x); if(length(z)==0) return(NA); as.numeric(na
 #'
 #' @return A numeric value for the KR-20 coefficient, or NA_real_ if
 #'   calculation is not possible.
+#' @export
 #' @examples
 #' item_matrix <- data.frame(
 #'   m1 = c(1, 1, 0, 1),
@@ -54,7 +59,6 @@ d_mode <- function(x){ z <- table(x); if(length(z)==0) return(NA); as.numeric(na
 #'   m3 = c(0, 1, 0, 0)
 #' )
 #' kr20(item_matrix)
-#' @noRd
 kr20 <- function(m){
   if(is.null(m)||ncol(m)<2) return(NA_real_)
   k<-ncol(m); tot<-rowSums(m,na.rm=TRUE)
@@ -71,11 +75,11 @@ kr20 <- function(m){
 #' @param item A numeric vector of dichotomous item scores (0/1).
 #' @param rest A numeric vector of the total scores, excluding the item.
 #' @return The point-biserial correlation coefficient.
+#' @export
 #' @examples
 #' item1 <- c(1, 0, 1, 0, 1, 1)
 #' rest_score <- c(10, 8, 12, 5, 9, 11)
 #' pbiserial_rest(item1, rest_score)
-#' @noRd
 pbiserial_rest <- function(item, rest){
   if(all(is.na(item)) || length(unique(na.omit(item)))<2) return(NA_real_)
   tryCatch(stats::cor(item, rest, use="pairwise.complete.obs"), error=function(e) NA_real_)
@@ -88,9 +92,9 @@ pbiserial_rest <- function(item, rest){
 #'
 #' @param x A vector, typically character.
 #' @return A character vector of normalized grades (A-E) or NA.
+#' @export
 #' @examples
 #' norm_letter(c(" a ", "B", "c", "F", "d", NA))
-#' @noRd
 norm_letter <- function(x){
   v <- as.character(x) %>%
     stringr::str_to_upper() %>%
@@ -104,10 +108,10 @@ norm_letter <- function(x){
 #'
 #' @param p A numeric value or vector (item difficulty).
 #' @return A numeric value or vector (1 - p).
+#' @export
 #' @examples
 #' q_index(0.8)
 #' q_index(c(0.2, 0.5, 0.7))
-#' @noRd
 q_index <- function(p) 1-p
 
 #-------------------------------------------------------------------------------
@@ -121,10 +125,10 @@ q_index <- function(p) 1-p
 #'
 #' @param sc A data.frame of scored items (0=wrong, 1=correct, NA=missing).
 #' @return A tibble with columns `Dogru`, `Yanlis`, and `Bos`.
+#' @export
 #' @examples
 #' score_df <- data.frame(m1 = c(1, 0, 1), m2 = c(0, 1, NA), m3 = c(1, 1, 1))
 #' student_counts(score_df)
-#' @noRd
 student_counts <- function(sc){
   df <- as.data.frame(sc)
   if (ncol(df)==0) return(tibble::tibble(Dogru=rep(0, nrow(df)), Yanlis=rep(0, nrow(df)), Bos=rep(0, nrow(df))))
@@ -142,9 +146,9 @@ student_counts <- function(sc){
 #'
 #' @param x A vector (typically character) of raw scores.
 #' @return A numeric vector of cleaned scores.
+#' @export
 #' @examples
 #' parse_lc_raw(c("10", "5.5", "0", "-2", "ikiyüz", NA, "1000001"))
-#' @noRd
 parse_lc_raw <- function(x){
   v <- suppressWarnings(as.numeric(as.character(x)))
   v[is.na(v)] <- NA_real_
@@ -160,10 +164,10 @@ parse_lc_raw <- function(x){
 #'
 #' @param x A character vector or a single string containing column names.
 #' @return A character vector of trimmed, non-empty column names.
+#' @export
 #' @examples
 #' norm_cols(" m1 , m2;m3")
 #' norm_cols(c(" m1 ", "m2", "", " m3 "))
-#' @noRd
 norm_cols <- function(x){
   if (is.null(x)) return(character(0))
 
@@ -183,9 +187,9 @@ norm_cols <- function(x){
 #' Returns 0.27 if the package is not installed or an error occurs.
 #'
 #' @return A numeric value for the quantile (default 0.27).
+#' @export
 #' @examples
 #' get_itemexam_quant()
-#' @noRd
 get_itemexam_quant <- function(){
   q <- 0.27
   if (requireNamespace("psychometric", quietly = TRUE)) {
@@ -203,6 +207,7 @@ get_itemexam_quant <- function(){
 #' @param v The numeric value to display.
 #' @param type The type of value ('generic', 'p', 'r') for coloring rules.
 #' @return An `htmltools::span()` object.
+#' @export
 #' @examples
 #' if (interactive()) {
 #'   # Example for difficulty (p)
@@ -210,7 +215,6 @@ get_itemexam_quant <- function(){
 #'   # Example for discrimination (r)
 #'   color_badge(0.2, "r")
 #' }
-#' @noRd
 color_badge <- function(v, type = c("generic", "p", "r")){
   type <- match.arg(type)
   col <- "#888"
@@ -235,10 +239,10 @@ color_badge <- function(v, type = c("generic", "p", "r")){
 #' @param ap Average difficulty (p-value).
 #' @param ar Average discrimination (r-value).
 #' @return A character vector of translation keys.
+#' @export
 #' @examples
 #' comment_overall_keys(0.6, 0.35) # Medium, Keep
 #' comment_overall_keys(0.2, 0.15) # Hard, Remove
-#' @noRd
 comment_overall_keys <- function(ap, ar){
   pkey <- if (is.na(ap)) NULL else if (ap < .4)
     "comment_overall.difficulty.low"
@@ -263,11 +267,11 @@ comment_overall_keys <- function(ap, ar){
 #'
 #' @param p A numeric item difficulty value.
 #' @return A character string (translation key).
+#' @export
 #' @examples
 #' difficulty_label_key(0.3) # Hard
 #' difficulty_label_key(0.7) # Medium
 #' difficulty_label_key(0.9) # Easy
-#' @noRd
 difficulty_label_key <- function(p){
   if (is.na(p)) return(NA_character_)
   if (p < .40)      "labels.difficulty.hard"
@@ -281,11 +285,11 @@ difficulty_label_key <- function(p){
 #'
 #' @param r A numeric item discrimination value.
 #' @return A character string (translation key).
+#' @export
 #' @examples
 #' discrimination_decision_key(0.15) # Remove
 #' discrimination_decision_key(0.25) # Consider
 #' discrimination_decision_key(0.4)  # Keep
-#' @noRd
 discrimination_decision_key <- function(r){
   if (is.na(r)) return(NA_character_)
   if (r < .20)      "labels.discrimination.remove"
@@ -299,9 +303,9 @@ discrimination_decision_key <- function(r){
 #'
 #' @param cols A character vector of column names.
 #' @return A character vector of names that matched the ID pattern.
+#' @export
 #' @examples
 #' detect_id_cols(c("Ad", "Soyad", "ogrenci no", "Madde1", "StudentID"))
-#' @noRd
 detect_id_cols <- function(cols){
   if(length(cols)==0) return(character(0))
   rx <- "(^id$|kimlik|ogrenci|\u00f6\u011frenci|no$|numara$|student\\s*id)"
@@ -315,9 +319,9 @@ detect_id_cols <- function(cols){
 #' @param x A vector of student responses.
 #' @param key The correct answer key (e.g., "D", "Y", "TRUE", "FALSE").
 #' @return An integer vector (1=correct, 0=wrong, NA=invalid).
+#' @export
 #' @examples
 #' parse_tf_bin(c("D", "Y", "DOGRU", "False", "Belki"), key = "D")
-#' @noRd
 parse_tf_bin <- function(x, key){
   norm <- function(v){
     v <- as.character(v) %>% stringr::str_to_upper() %>% stringr::str_trim()
@@ -335,9 +339,9 @@ parse_tf_bin <- function(x, key){
 #' @param x A vector of student responses.
 #' @param key The correct answer key (e.g., "A", "B").
 #' @return An integer vector (1=correct, 0=wrong, NA=invalid).
+#' @export
 #' @examples
 #' parse_mc_bin(c("a", "B", "c", "F", " b "), key = "B")
-#' @noRd
 parse_mc_bin <- function(x, key){
   xN<-as.character(x) %>% stringr::str_to_upper() %>% stringr::str_trim()
   kN<-as.character(key) %>% stringr::str_to_upper() %>% stringr::str_trim()
@@ -351,9 +355,9 @@ parse_mc_bin <- function(x, key){
 #'
 #' @param x A vector of potential 1/0 scores.
 #' @return An integer vector (1, 0, or NA).
+#' @export
 #' @examples
 #' parse_lc_bin(c(1, 0, "1", "0", 2, "A", NA))
-#' @noRd
 parse_lc_bin <- function(x){
   v <- suppressWarnings(as.numeric(as.character(x)))
   v[!(v %in% c(0,1))] <- NA
@@ -366,12 +370,19 @@ parse_lc_bin <- function(x){
 #'
 #' @param vec The vector to check.
 #' @return TRUE if the vector is 0/1 scored, FALSE otherwise.
+#' @export
 #' @examples
 #' is_scored_01(c(1, 0, 1, 0, NA))
 #' is_scored_01(c(1, 0, 2, 0))
 #' is_scored_01(c("A", "B", "C"))
-#' @noRd
 is_scored_01 <- function(vec){
-  u <- unique(na.omit(suppressWarnings(as.numeric(as.character(vec)))))
-  length(u) > 0 && all(u %in% c(0,1))
+  numeric_values <- suppressWarnings(as.numeric(as.character(vec)))
+  non_missing <- !is.na(vec)
+
+  # Invalid text is not an unanswered item. Reject mixed columns instead of
+  # silently converting values such as "unknown" into missing responses.
+  if (any(non_missing & is.na(numeric_values))) return(FALSE)
+
+  values <- numeric_values[non_missing]
+  length(values) > 0 && all(values %in% c(0, 1))
 }

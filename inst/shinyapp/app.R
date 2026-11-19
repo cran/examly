@@ -6,167 +6,33 @@ library(officer); library(flextable); library(glue)
 library(magrittr)
 library(ggplot2)
 
-app_css <- HTML("
-  body { background: #f4f7fb; color: #162033; padding-bottom: 58px; }
-  .navbar-default {
-    background: rgba(255,255,255,.96);
-    border: 0;
-    border-bottom: 1px solid #dbe4ef;
-    box-shadow: 0 8px 24px rgba(15,23,42,.06);
-  }
-  .navbar-default .navbar-brand { color: #162033; font-weight: 800; letter-spacing: 0; }
-  .navbar-default .navbar-nav > li > a { color: #475569; font-weight: 650; }
-  .navbar-default .navbar-nav > .active > a,
-  .navbar-default .navbar-nav > .active > a:focus,
-  .navbar-default .navbar-nav > .active > a:hover { background: #eaf1ff; color: #1d4ed8; }
-  .container-fluid { max-width: 1280px; }
-  .app-sidebar, .surface-panel, .table-card, details.toggle-card {
-    background: #fff;
-    border: 1px solid #dbe4ef;
-    border-radius: 8px;
-    box-shadow: 0 16px 40px rgba(15,23,42,.08);
-  }
-  .app-sidebar, .surface-panel, .table-card { padding: 18px; margin-bottom: 18px; }
-  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 16px 0 14px; }
-  .page-head h3 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: 0; }
-  .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; margin: 10px 0 18px; }
-  .metric-card {
-    background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
-    border: 1px solid #dbe4ef;
-    border-radius: 8px;
-    padding: 14px;
-    min-height: 92px;
-    box-shadow: 0 10px 24px rgba(15,23,42,.06);
-  }
-  .metric-label { color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
-  .metric-value { color: #162033; font-size: 26px; line-height: 1.1; font-weight: 800; letter-spacing: 0; }
-  .metric-note { margin-top: 6px; color: #64748b; font-size: 12px; }
-  .table-card table, .surface-panel table, table.table {
-    background: #fff;
-    border-collapse: separate;
-    border-spacing: 0;
-    border: 1px solid #dbe4ef;
-    border-radius: 8px;
-    overflow: hidden;
-    width: 100%;
-  }
-  .table-card th, .surface-panel th, table.table th {
-    background: #eef4ff;
-    color: #1e3a8a;
-    font-weight: 750;
-    border-bottom: 1px solid #dbe4ef !important;
-  }
-  .table-card td, .surface-panel td, table.table td { border-color: #edf2f7 !important; vertical-align: middle !important; }
-  .table-card tbody tr:hover, .surface-panel tbody tr:hover, table.table tbody tr:hover { background: #f8fbff; }
-  .preview-scroll { max-width: 100%; overflow-x: auto; padding-bottom: 6px; }
-  .preview-scroll table { width: max-content; min-width: 100%; }
-  .preview-scroll th, .preview-scroll td { white-space: nowrap; }
-  .value-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 62px;
-    padding: 4px 9px;
-    border-radius: 8px;
-    color: #fff;
-    font-weight: 800;
-  }
-  .value-pill-neutral { background: #64748b; }
-  .value-pill-good { background: #16a34a; }
-  .value-pill-risk { background: #dc2626; }
-  .comment-table { margin-top: 10px; }
-  .comment-table td:first-child { width: 220px; font-weight: 750; color: #1e3a8a; }
-  .comment-table .comment-state { width: 110px; text-align: center; }
-  .outcome-grid-wrap { max-height: 360px; overflow: auto; border: 1px solid #dbe4ef; border-radius: 8px; }
-  .outcome-grid { width: 100%; border-collapse: separate; border-spacing: 0; }
-  .outcome-grid th { position: sticky; top: 0; z-index: 1; background: #eef4ff; color: #1e3a8a; }
-  .outcome-grid th, .outcome-grid td { padding: 7px 9px; border-bottom: 1px solid #edf2f7; vertical-align: middle; }
-  .outcome-grid td:first-child { width: 180px; font-weight: 750; color: #334155; }
-  .outcome-grid .form-group { margin-bottom: 0; }
-  .failure-rank-title { margin: 18px 0 10px; font-weight: 800; color: #162033; }
-  .summary-stat-table { font-size: 15px; }
-  .summary-stat-table th { font-size: 15px; }
-  .summary-stat-table td { font-size: 15px; padding: 10px 12px !important; }
-  .summary-stat-table td:first-child { font-weight: 700; color: #1e3a8a; }
-  .item-type-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(190px, 1fr));
-    gap: 12px;
-  }
-  .item-type-card {
-    border: 1px solid #dbe4ef;
-    border-radius: 8px;
-    background: #fff;
-    min-height: 230px;
-    padding: 12px;
-    box-shadow: 0 10px 24px rgba(15,23,42,.05);
-  }
-  .item-type-card-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .item-type-card-title {
-    font-weight: 800;
-    color: #162033;
-    line-height: 1.25;
-  }
-  .item-type-card .checkbox {
-    margin-top: 6px;
-    margin-bottom: 6px;
-  }
-  .item-type-card .form-group {
-    max-height: 210px;
-    overflow-y: auto;
-    margin-bottom: 0;
-    padding-right: 4px;
-  }
-  .select-all-link {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid #bfdbfe;
-    border-radius: 999px;
-    padding: 3px 8px;
-    background: #eff6ff;
-    color: #1d4ed8 !important;
-    font-size: 12px;
-    font-weight: 700;
-    text-decoration: none !important;
-    white-space: nowrap;
-  }
-  @media (max-width: 1100px) {
-    .item-type-grid { grid-template-columns: repeat(2, minmax(190px, 1fr)); }
-  }
-  @media (max-width: 700px) {
-    .item-type-grid { grid-template-columns: 1fr; }
-  }
-  .btn, .form-control, .selectize-input { border-radius: 8px !important; }
-  .btn-default, .btn-primary, .btn-info, .shiny-download-link {
-    background: #2563eb;
-    border: 0;
-    color: #fff !important;
-    box-shadow: 0 8px 18px rgba(37,99,235,.16);
-  }
-  .btn-default:hover, .btn-primary:hover, .btn-info:hover, .shiny-download-link:hover { background: #1d4ed8; color: #fff !important; }
-  .report-grid { display: grid; grid-template-columns: repeat(2, minmax(210px, 1fr)); gap: 12px; max-width: 620px; }
-  .report-grid .btn { width: 100%; text-align: left; padding: 12px 14px; }
-  @media (max-width: 900px) {
-    .metric-grid, .report-grid { grid-template-columns: 1fr; }
-    .page-head { align-items: flex-start; flex-direction: column; }
-  }
-")
+title_default <- "Sınav Başlığı"
 
-utf8_text <- function(...) intToUtf8(c(...))
-title_default <- utf8_text(83, 305, 110, 97, 118, 32, 66, 97, 351, 108, 305, 287, 305)
+grade_plot_palettes <- list(
+  classic = c(surface = "#f8fafc", text = "#162033", muted = "#475569", grid = "#dbe4ef"),
+  academic = c(surface = "#f5f7fa", text = "#18243a", muted = "#526177", grid = "#d4dce8"),
+  dark = c(surface = "#1c293c", text = "#ebf1fb", muted = "#aebdd2", grid = "#40516b")
+)
 
 ui <- navbarPage(
   title = uiOutput("app_brand"),
   windowTitle = "examly: Statistical Metrics and Reporting Tool",
   id = "mainnav",
   header = tagList(
-    tags$head(tags$style(app_css)),
+    tags$head(
+      tags$script(src = "examly-theme.js"),
+      tags$link(rel = "stylesheet", href = "examly.css")
+    ),
+    tags$div(
+      class = "examly-toolbar",
+      tags$label(id = "theme_label", `for` = "examly_theme", "Tema"),
+      tags$select(
+        id = "examly_theme",
+        tags$option(value = "classic", "Klasik"),
+        tags$option(value = "academic", "Akademik"),
+        tags$option(value = "dark", "Koyu")
+      )
+    ),
     tags$script(HTML("
       Shiny.addCustomMessageHandler('set-title', function(txt){
         document.title = txt;
@@ -181,17 +47,14 @@ ui <- navbarPage(
         width = 4,
         class = "app-sidebar",
         uiOutput("lang_selector"),
-        textInput("exam_title", title_default, value = title_default),
+        textInput("exam_title", "Sınav Başlığı", value = title_default),
         textInput("school_name", "Okul", value = ""),
-        textInput("class_name", utf8_text(83, 305, 110, 305, 102, 47, 350, 117, 98, 101), value = ""),
+        textInput("class_name", "Sınıf/Şube", value = ""),
         uiOutput("file_input"),
-        checkboxInput("header", utf8_text(66, 97, 351, 108, 305, 107, 32, 115, 97, 116, 305, 114, 305, 32, 118, 97, 114, 32, 40, 67, 83, 86, 32, 105, 231, 105, 110, 41), TRUE),
+        checkboxInput("header", "Başlık satırı var (CSV için)", TRUE),
         radioButtons(
-          "sep", utf8_text(65, 121, 114, 97, 231, 32, 40, 67, 83, 86, 32, 105, 231, 105, 110, 41),
-          choices = stats::setNames(c(",", ";"), c(
-            utf8_text(86, 105, 114, 103, 252, 108),
-            utf8_text(78, 111, 107, 116, 97, 108, 305, 32, 86, 105, 114, 103, 252, 108)
-          )),
+          "sep", "Ayraç (CSV için)",
+          choices = c("Virgül" = ",", "Noktalı Virgül" = ";"),
           selected = ","
         ),
 
@@ -214,7 +77,7 @@ ui <- navbarPage(
            fluidPage(
              tags$head(tags$style(HTML("
         .center-title {text-align:center;font-weight:600;font-size:20px;}
-        .compact-wrap {position:relative; overflow-x:hidden; padding:6px; border:1px solid #eee; border-radius:8px;}
+        .compact-wrap {position:relative; overflow-x:hidden; padding:6px; border:1px solid var(--line); border-radius:8px;}
         table.compact-grid {border-collapse:separate; border-spacing:0; width:100%; table-layout:fixed;}
         table.compact-grid th {padding:6px 8px; white-space:normal; word-break:break-word; font-size:12px;}
         table.compact-grid td {padding:2px; vertical-align:middle;}
@@ -223,20 +86,20 @@ ui <- navbarPage(
         .weights-grid td {padding:1px;}
         .grid-input-num .form-control {position:relative; z-index:1; width:100%; height:24px; padding:2px 4px;}
         .section-gap {margin-top:10px; margin-bottom:8px;}
-        .muted {color:#777;}
-        details.toggle-card {border:1px solid #e5e7eb; border-radius:10px; background:#f9fafb;}
-        details.toggle-card[open] {background:#f3f4f6;}
+        .muted {color:var(--muted);}
+        details.toggle-card {border:1px solid var(--line); border-radius:10px; background:var(--surface);}
+        details.toggle-card[open] {background:var(--surface-muted);}
         details.toggle-card > summary {list-style:none; font-weight:700; font-size:16px; padding:10px 40px 10px 14px;
                                        cursor:pointer; position:relative; user-select:none;}
         details.toggle-card > summary::-webkit-details-marker {display:none;}
         details.toggle-card > summary::after {content:'\\25BE'; position:absolute; right:12px; top:50%; transform:translateY(-50%);}
         details.toggle-card[open] > summary::after {content:'\\25B4';}
         details.toggle-card .toggle-body {padding:6px 14px 12px;}
-        details.toggle-card .hint {margin:-6px 14px 8px 14px; color:#6b7280;}
-        .banner {margin:10px 0; padding:10px 14px; background:#eef6ff; border-left:4px solid #1d4ed8; border-radius:8px; font-size:16px;}
-        .details-summary-note {font-size: 12px; font-weight: 400; color: #6b7280;}
+        details.toggle-card .hint {margin:-6px 14px 8px 14px; color:var(--muted);}
+        .banner {margin:10px 0; padding:10px 14px; background:var(--accent-soft); border-left:4px solid var(--accent); border-radius:8px; font-size:16px;}
+        .details-summary-note {font-size: 12px; font-weight: 400; color: var(--muted);}
         details.toggle-card > summary { display: flex; align-items: center; gap: 8px;}
-        .select-all-link { font-size: 11px; text-decoration: underline; cursor: pointer; color: #337ab7; font-weight: normal;}
+        .select-all-link { cursor: pointer; }
       "))),
              div(class="center-title", textOutput("title_display_center")),
              br(),
@@ -259,7 +122,7 @@ ui <- navbarPage(
                           )
              ),
              uiOutput("max_score_banner"),
-             uiOutput("learning_outcomes_ui"),
+             tags$div(class = "surface-panel", uiOutput("learning_outcomes_ui")),
              br(),
              fluidRow(
                column(12,
@@ -346,32 +209,17 @@ ui <- navbarPage(
   tabPanel(
     title = textOutput("tab_reports", container = span),
     fluidPage(
-      tags$div(class = "page-head", h3(textOutput("title_display_rapor"))),
+      tags$div(
+        class = "page-head",
+        h3(textOutput("title_display_rapor")),
+        uiOutput("reports_about_button")
+      ),
       tags$div(class = "surface-panel", uiOutput("reports_intro_ui")),
       br(),
       tags$div(class = "surface-panel", uiOutput("reports_buttons_ui"))
     )
   ),
-  tabPanel(
-    title = textOutput("tab_about", container = span),
-    fluidPage(
-      tags$div(class = "page-head", h3(textOutput("about_page_title"))),
-      tags$div(class = "surface-panel", uiOutput("about_info_ui"))
-    )
-  ),
   footer = tagList(
-    tags$style(HTML("
-    body {
-        padding-bottom: 70px;
-      }
-      .custom-footer {position: fixed; left: 0; right: 0; bottom: 0;
-        height: 32px; background: #f8f9fa; border-top: 1px solid #e5e7eb;
-        display: flex; align-items: center; justify-content: flex-end;
-        padding: 0 14px; font-size: 14px; color: #333; z-index: 1040;}
-      .custom-footer a {text-decoration: none; color: #337ab7;}
-      .custom-footer a:hover {text-decoration: underline;}
-      .custom-footer .glyphicon {margin-right: 6px; font-size: 13px;}
-    ")),
     tags$div(class = "custom-footer", uiOutput("about_link")),
     tags$script(HTML("
       $(document).on('click', '#about_footer', function(e){
@@ -384,27 +232,11 @@ ui <- navbarPage(
 
 server <- function(input, output, session) {
 
-  dict <- reactiveVal(examly:::i18n_load("tr"))
-  decode_unicode_tags <- function(x) {
-    if (!is.character(x)) return(x)
-    vapply(x, function(value) {
-      if (is.na(value) || !grepl("<U\\+[0-9A-Fa-f]{4,6}>", value)) return(value)
-      matches <- gregexpr("<U\\+[0-9A-Fa-f]{4,6}>", value, perl = TRUE)[[1]]
-      pieces <- regmatches(value, list(matches))[[1]]
-      replacements <- vapply(pieces, function(piece) {
-        code <- sub("^<U\\+([0-9A-Fa-f]{4,6})>$", "\\1", piece)
-        intToUtf8(strtoi(code, base = 16L))
-      }, character(1), USE.NAMES = FALSE)
-      for (i in seq_along(pieces)) {
-        value <- sub(pieces[[i]], replacements[[i]], value, fixed = TRUE)
-      }
-      value
-    }, character(1), USE.NAMES = FALSE)
-  }
-  T_   <- function(key, default = NULL) decode_unicode_tags(examly:::i18n_t(dict(), key, default))
+  dict <- reactiveVal(examly::i18n_load("tr"))
+  T_   <- function(key, default = NULL) examly::i18n_t(dict(), key, default)
 
   observeEvent(input$lang, {
-    dict(examly:::i18n_load(input$lang))
+    dict(examly::i18n_load(input$lang))
   }, ignoreInit = FALSE)
 
   output$app_brand <- renderUI({
@@ -418,6 +250,12 @@ server <- function(input, output, session) {
       "set-title",
       T_("AppTitle", "examly: Statistical Metrics and Reporting Tool")
     )
+    session$sendCustomMessage("examly-theme-labels", list(
+      label = T_("Theme", "Tema"),
+      classic = T_("ThemeClassic", "Klasik"),
+      academic = T_("ThemeAcademic", "Akademik"),
+      dark = T_("ThemeDark", "Koyu")
+    ))
   })
 
   output$tab_upload <- renderText( T_("UploadTab", "Veri GiriÃƒâ€¦Ã…Â¸i") )
@@ -437,8 +275,6 @@ server <- function(input, output, session) {
   output$distractor_table_hdr   <- renderText( T_("DistractorTableHeader", "SeÃƒÆ’Ã‚Â§enek DaÃƒâ€Ã…Â¸Ãƒâ€Ã‚Â±lÃƒâ€Ã‚Â±mlarÃƒâ€Ã‚Â±") )
   output$tab_student_results <- renderText( T_("StudentResults", "ÃƒÆ’Ã¢â‚¬â€œÃƒâ€Ã…Â¸renci SonuÃƒÆ’Ã‚Â§larÃƒâ€Ã‚Â±") )
 
-  output$tab_about <- renderText(T_("About", "Hakkında"))
-  output$about_page_title <- renderText(T_("About", "Hakkında"))
   output$tab_reports <- renderText( T_("Reports", "Raporlar") )
 
   output$reports_intro_ui <- renderUI({
@@ -468,7 +304,7 @@ server <- function(input, output, session) {
       inputId = "lang",
       label   = T_("LanguageSelection", "Dil Seçimi"),
       choices = c("Türkçe" = "tr", "English" = "en"),
-      selected <- examly:::`%||%`(input$lang, "tr"),
+      selected <- examly::`%||%`(input$lang, "tr"),
       inline = TRUE
     )
   })
@@ -532,7 +368,7 @@ server <- function(input, output, session) {
         c(",", ";"),
         c(T_("Comma", "Virgül"), T_("Semicolon", "Noktalı Virgül"))
       ),
-      selected <- examly:::`%||%`(input$sep, ",")
+      selected <- examly::`%||%`(input$sep, ",")
     )
 
     updateSelectInput(
@@ -542,8 +378,8 @@ server <- function(input, output, session) {
   }, ignoreInit = FALSE)
 
   exam_title <- reactive({ req(input$exam_title); input$exam_title })
-  school_name <- reactive({ stringr::str_squish(examly:::`%||%`(input$school_name, "")) })
-  class_name <- reactive({ stringr::str_squish(examly:::`%||%`(input$class_name, "")) })
+  school_name <- reactive({ stringr::str_squish(examly::`%||%`(input$school_name, "")) })
+  class_name <- reactive({ stringr::str_squish(examly::`%||%`(input$class_name, "")) })
 
   add_report_metadata <- function(doc) {
     school <- school_name()
@@ -569,20 +405,15 @@ server <- function(input, output, session) {
   output$title_display_rapor <- renderText({ exam_title() })
 
   app_version <- function() {
-    pkg_ver <- tryCatch(
-      as.character(utils::packageDescription("examly", fields = "Version")),
-      error = function(e) NA_character_
-    )
-    if (!is.na(pkg_ver) && nzchar(pkg_ver)) return(pkg_ver)
-
     desc_paths <- c(file.path(getwd(), "DESCRIPTION"), file.path(getwd(), "..", "..", "DESCRIPTION"))
     for (desc_path in desc_paths) {
-      if (file.exists(desc_path)) {
-        pkg_ver <- tryCatch(as.character(read.dcf(desc_path, fields = "Version")[1, 1]), error = function(e) NA_character_)
-        if (!is.na(pkg_ver) && nzchar(pkg_ver)) return(pkg_ver)
-      }
+      pkg_ver <- tryCatch(as.character(read.dcf(desc_path, fields = "Version")[1, 1]), error = function(e) NA_character_)
+      if (!is.na(pkg_ver) && nzchar(pkg_ver)) return(pkg_ver)
     }
-    "0.3"
+    tryCatch(
+      as.character(utils::packageDescription("examly", fields = "Version")),
+      error = function(e) "0.5"
+    )
   }
 
   about_content_ui <- function(pkg_ver) {
@@ -625,6 +456,11 @@ server <- function(input, output, session) {
     )
   })
 
+  output$reports_about_button <- renderUI({
+    dict()
+    actionButton("about_reports", T_("About", "Hakkında"), icon = icon("info-sign"))
+  })
+
   show_about_modal <- function() {
     dict()
     pkg_ver <- app_version()
@@ -640,6 +476,7 @@ server <- function(input, output, session) {
   }
 
   observeEvent(input$about_footer, show_about_modal())
+  observeEvent(input$about_reports, show_about_modal())
 
   output$about_info_ui <- renderUI({
     dict()
@@ -718,10 +555,10 @@ server <- function(input, output, session) {
   observeEvent(input$name_col, {
     df <- raw_data()
     cols <- names(df)
-    name_col <- examly:::`%||%`(input$name_col, "")
+    name_col <- examly::`%||%`(input$name_col, "")
     item_choices <- setdiff(cols, name_col)
     item_selected <- intersect(
-      setdiff(examly:::norm_cols(input$item_cols), name_col),
+      setdiff(examly::norm_cols(input$item_cols), name_col),
       item_choices
     )
 
@@ -734,8 +571,8 @@ server <- function(input, output, session) {
   }, ignoreInit = FALSE)
 
   data_items <- reactive({
-    df <- raw_data(); req(examly:::norm_cols(input$item_cols))
-    sel <- setdiff(examly:::norm_cols(input$item_cols), input$name_col)
+    df <- raw_data(); req(examly::norm_cols(input$item_cols))
+    sel <- setdiff(examly::norm_cols(input$item_cols), input$name_col)
     sel <- intersect(sel, names(df))
     if(length(sel) == 0) return(df[, 0, drop = FALSE])
     as.data.frame(df[, sel, drop=FALSE])
@@ -747,7 +584,7 @@ server <- function(input, output, session) {
 
   output$learning_outcomes_ui <- renderUI({
     dict()
-    cols <- examly:::norm_cols(input$item_cols)
+    cols <- examly::norm_cols(input$item_cols)
     if (length(cols) == 0) return(NULL)
     header_item <- T_("ItemCol", "Madde")
     header_outcome <- T_("LearningOutcome", "KazanÃƒâ€Ã‚Â±m")
@@ -759,36 +596,24 @@ server <- function(input, output, session) {
                           placeholder = T_("LearningOutcomePlaceholder", "Ãƒâ€Ã‚Â°steÃƒâ€Ã…Â¸e baÃƒâ€Ã…Â¸lÃƒâ€Ã‚Â± kazanÃƒâ€Ã‚Â±m yazÃƒâ€Ã‚Â±n")))
       )
     })
-    tags$details(
-      class = "toggle-card",
-      open = NA,
-      tags$summary(
-        tagList(
-          tags$span(T_("LearningOutcomesHeader", "Madde KazanÃƒâ€Ã‚Â±mlarÃƒâ€Ã‚Â±")),
-          tags$span(
-            class = "details-summary-note",
-            T_("LearningOutcomesNote", "Ã„Â°steÃ„Å¸e baÃ„Å¸lÃ„Â±dÃ„Â±r. Girilirse en ÃƒÂ§ok yanlÃ„Â±Ã…Å¸ yapÃ„Â±lan madde sÃ„Â±ralamasÃ„Â±nda ilgili kazanÃ„Â±m da gÃƒÂ¶sterilir.")
-          )
-        )
-      ),
+    tagList(
+      h4(T_("LearningOutcomesHeader", "Madde KazanÃƒâ€Ã‚Â±mlarÃƒâ€Ã‚Â±")),
+      tags$p(class = "muted", T_("LearningOutcomesNote", "Ã„Â°steÃ„Å¸e baÃ„Å¸lÃ„Â±dÃ„Â±r. Girilirse en ÃƒÂ§ok yanlÃ„Â±Ã…Å¸ yapÃ„Â±lan madde sÃ„Â±ralamasÃ„Â±nda ilgili kazanÃ„Â±m da gÃƒÂ¶sterilir.")),
       tags$div(
-        class = "toggle-body",
-        tags$div(
-          class = "outcome-grid-wrap",
-          tags$table(
-            class = "outcome-grid",
-            tags$thead(tags$tr(tags$th(header_item), tags$th(header_outcome))),
-            tags$tbody(rows)
-          )
+        class = "outcome-grid-wrap",
+        tags$table(
+          class = "outcome-grid",
+          tags$thead(tags$tr(tags$th(header_item), tags$th(header_outcome))),
+          tags$tbody(rows)
         )
       )
     )
   })
 
   item_outcomes <- reactive({
-    cols <- examly:::norm_cols(input$item_cols)
+    cols <- examly::norm_cols(input$item_cols)
     vals <- vapply(seq_along(cols), function(i) {
-      stringr::str_squish(as.character(examly:::`%||%`(input[[outcome_input_id(i)]], "")))
+      stringr::str_squish(as.character(examly::`%||%`(input[[outcome_input_id(i)]], "")))
     }, character(1))
     names(vals) <- cols
     vals
@@ -838,16 +663,16 @@ server <- function(input, output, session) {
 
   mc_items_use <- reactive({
     taken <- union(
-      union(examly:::`%||%`(input$tf_items, character(0)),
-            examly:::`%||%`(input$lc_items, character(0))),
-      examly:::`%||%`(input$bin_items, character(0))
+      union(examly::`%||%`(input$tf_items, character(0)),
+            examly::`%||%`(input$lc_items, character(0))),
+      examly::`%||%`(input$bin_items, character(0))
     )
-    base_cols <- examly:::`%||%`(examly:::norm_cols(input$item_cols), character(0))
+    base_cols <- examly::`%||%`(examly::norm_cols(input$item_cols), character(0))
     if(!is.null(input$mc_items) && length(input$mc_items)>0) input$mc_items else setdiff(base_cols, taken)
   })
-  tf_items_use  <- reactive({ examly:::`%||%`(input$tf_items,  character(0)) })
-  lc_items_use  <- reactive({ examly:::`%||%`(input$lc_items,  character(0)) })
-  bin_items_use <- reactive({ examly:::`%||%`(input$bin_items, character(0)) })
+  tf_items_use  <- reactive({ examly::`%||%`(input$tf_items,  character(0)) })
+  lc_items_use  <- reactive({ examly::`%||%`(input$lc_items,  character(0)) })
+  bin_items_use <- reactive({ examly::`%||%`(input$bin_items, character(0)) })
 
   # --- SELECT ALL BUTTONS (RENDERED IN SERVER) ---
   create_header_with_link <- function(label_text, link_id, link_text) {
@@ -896,7 +721,7 @@ server <- function(input, output, session) {
     sel_now <- isolate(input$lc_items)
     tags$div(
       class = "item-type-card",
-      create_header_with_link(T_("LCItems","Uzun Cevapli Maddeler"), "sel_all_lc", T_("SelectAll", "TÃƒÆ’Ã‚Â¼mÃƒÆ’Ã‚Â¼nÃƒÆ’Ã‚Â¼ SeÃƒÆ’Ã‚Â§")),
+      create_header_with_link(T_("LCItems","Uzun CevaplÃƒâ€Ã‚Â± Maddeler"), "sel_all_lc", T_("SelectAll", "TÃƒÆ’Ã‚Â¼mÃƒÆ’Ã‚Â¼nÃƒÆ’Ã‚Â¼ SeÃƒÆ’Ã‚Â§")),
       checkboxGroupInput("lc_items", label = NULL,
                          choices=input$item_cols, selected=sel_now %||% lc_items_use())
     )
@@ -980,8 +805,8 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$distribute_weights_btn, {
-    req(examly:::norm_cols(input$item_cols))
-    cols <- examly:::norm_cols(input$item_cols)
+    req(examly::norm_cols(input$item_cols))
+    cols <- examly::norm_cols(input$item_cols)
     n <- length(cols)
     if(n > 0){
       val <- 100 / n
@@ -992,8 +817,8 @@ server <- function(input, output, session) {
   })
 
   output$item_weight_table <- renderUI({
-    req(examly:::norm_cols(input$item_cols))
-    hdrs <- examly:::norm_cols(input$item_cols)
+    req(examly::norm_cols(input$item_cols))
+    hdrs <- examly::norm_cols(input$item_cols)
     inputs <- lapply(hdrs, function(nm){
       tagAppendAttributes(numericInput(paste0("w_", nm), NULL, value = 1, min = 0, step = 0.5, width=NULL),
                           class="grid-input-num")
@@ -1005,40 +830,40 @@ server <- function(input, output, session) {
   })
 
   observeEvent(input$mc_items, {
-    mc <- examly:::`%||%`(input$mc_items,  character(0))
-    tf <- examly:::`%||%`(input$tf_items,  character(0))
-    lc <- examly:::`%||%`(input$lc_items,  character(0))
-    bn <- examly:::`%||%`(input$bin_items, character(0))
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_tf <- setdiff(tf, mc); new_lc <- setdiff(lc, mc); new_bn <- setdiff(bn, mc)
     if(!identical(new_tf, tf)) updateCheckboxGroupInput(session, "tf_items", selected = new_tf)
     if(!identical(new_lc, lc)) updateCheckboxGroupInput(session, "lc_items", selected = new_lc)
     if(!identical(new_bn, bn)) updateCheckboxGroupInput(session, "bin_items", selected = new_bn)
   }, ignoreInit = TRUE)
   observeEvent(input$tf_items, {
-    mc <- examly:::`%||%`(input$mc_items,  character(0))
-    tf <- examly:::`%||%`(input$tf_items,  character(0))
-    lc <- examly:::`%||%`(input$lc_items,  character(0))
-    bn <- examly:::`%||%`(input$bin_items, character(0))
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_mc <- setdiff(mc, tf); new_lc <- setdiff(lc, tf); new_bn <- setdiff(bn, tf)
     if(!identical(new_mc, mc)) updateCheckboxGroupInput(session, "mc_items", selected = new_mc)
     if(!identical(new_lc, lc)) updateCheckboxGroupInput(session, "lc_items", selected = new_lc)
     if(!identical(new_bn, bn)) updateCheckboxGroupInput(session, "bin_items", selected = new_bn)
   }, ignoreInit = TRUE)
   observeEvent(input$bin_items, {
-    mc <- examly:::`%||%`(input$mc_items,  character(0))
-    tf <- examly:::`%||%`(input$tf_items,  character(0))
-    lc <- examly:::`%||%`(input$lc_items,  character(0))
-    bn <- examly:::`%||%`(input$bin_items, character(0))
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_mc <- setdiff(mc, bn); new_tf <- setdiff(tf, bn); new_lc <- setdiff(lc, bn)
     if(!identical(new_mc, mc)) updateCheckboxGroupInput(session, "mc_items", selected = new_mc)
     if(!identical(new_tf, tf)) updateCheckboxGroupInput(session, "tf_items", selected = new_tf)
     if(!identical(new_lc, lc)) updateCheckboxGroupInput(session, "lc_items", selected = new_lc)
   }, ignoreInit = TRUE)
   observeEvent(input$lc_items, {
-    mc <- examly:::`%||%`(input$mc_items,  character(0))
-    tf <- examly:::`%||%`(input$tf_items,  character(0))
-    lc <- examly:::`%||%`(input$lc_items,  character(0))
-    bn <- examly:::`%||%`(input$bin_items, character(0))
+    mc <- examly::`%||%`(input$mc_items,  character(0))
+    tf <- examly::`%||%`(input$tf_items,  character(0))
+    lc <- examly::`%||%`(input$lc_items,  character(0))
+    bn <- examly::`%||%`(input$bin_items, character(0))
     new_mc <- setdiff(mc, lc); new_tf <- setdiff(tf, lc); new_bn <- setdiff(bn, lc)
     if(!identical(new_mc, mc)) updateCheckboxGroupInput(session, "mc_items", selected = new_mc)
     if(!identical(new_tf, tf)) updateCheckboxGroupInput(session, "tf_items", selected = new_tf)
@@ -1108,7 +933,7 @@ server <- function(input, output, session) {
   })
 
   item_weights <- reactive({
-    cols <- examly:::`%||%`(examly:::norm_cols(input$item_cols), character(0))
+    cols <- examly::`%||%`(examly::norm_cols(input$item_cols), character(0))
     w <- setNames(rep(1, length(cols)), cols)
     for(nm in cols){
       v <- suppressWarnings(as.numeric(input[[paste0("w_", nm)]]))
@@ -1120,42 +945,42 @@ server <- function(input, output, session) {
 
   scored_items <- reactive({
     df <- data_items(); keys <- answer_keys()
-    if (is.null(df) || (length(examly:::`%||%`(examly:::norm_cols(input$item_cols), character(0))) == 0)) return(NULL)
+    if (is.null(df) || (length(examly::`%||%`(examly::norm_cols(input$item_cols), character(0))) == 0)) return(NULL)
 
-    all_names <- examly:::norm_cols(input$item_cols)
+    all_names <- examly::norm_cols(input$item_cols)
     sc_bin <- matrix(NA_real_, nrow=nrow(df), ncol=length(all_names), dimnames=list(NULL, all_names)) %>% as.data.frame()
     lc_raw <- matrix(NA_real_, nrow=nrow(df), ncol=length(all_names), dimnames=list(NULL, all_names)) %>% as.data.frame()
 
     for(nm in lc_items_use()){
       if(nm %in% names(df)){
-        lc_raw[[nm]] <- examly:::parse_lc_raw(df[[nm]])
+        lc_raw[[nm]] <- examly::parse_lc_raw(df[[nm]])
         sc_bin[[nm]] <- NA_real_
       }
     }
 
     for(nm in bin_items_use()){
       if(nm %in% names(df)){
-        sc_bin[[nm]] <- examly:::parse_lc_bin(df[[nm]])
+        sc_bin[[nm]] <- examly::parse_lc_bin(df[[nm]])
       }
     }
 
     for(nm in setdiff(all_names, union(union(mc_items_use(), tf_items_use()),
                                        union(lc_items_use(), bin_items_use())))){
       col <- df[[nm]]
-      if(examly:::is_scored_01(col)){
-        sc_bin[[nm]] <- examly:::parse_lc_bin(col)
+      if(examly::is_scored_01(col)){
+        sc_bin[[nm]] <- examly::parse_lc_bin(col)
       }
     }
 
     for(nm in names(keys$mc)){
       if(isTruthy(keys$mc[[nm]]) && nm %in% names(df)){
-        sc_bin[[nm]] <- examly:::parse_mc_bin(df[[nm]], keys$mc[[nm]])
+        sc_bin[[nm]] <- examly::parse_mc_bin(df[[nm]], keys$mc[[nm]])
       }
     }
 
     for(nm in names(keys$tf)){
       if(isTruthy(keys$tf[[nm]]) && nm %in% names(df)){
-        sc_bin[[nm]] <- examly:::parse_tf_bin(df[[nm]], keys$tf[[nm]])
+        sc_bin[[nm]] <- examly::parse_tf_bin(df[[nm]], keys$tf[[nm]])
       }
     }
 
@@ -1171,7 +996,7 @@ server <- function(input, output, session) {
     )
   })
 
-  itemexam_quant_reactive <- reactive({ examly:::get_itemexam_quant() })
+  itemexam_quant_reactive <- reactive({ examly::get_itemexam_quant() })
 
   test_summary <- reactive({
     dict()
@@ -1184,7 +1009,7 @@ server <- function(input, output, session) {
 
     w <- item_weights()
     all_items <- colnames(sc_bin)
-    w_use <- examly:::`%||%`(w[all_items], rep(1, length(all_items)))
+    w_use <- examly::`%||%`(w[all_items], rep(1, length(all_items)))
     names(w_use) <- all_items
 
     Y <- as.data.frame(matrix(NA_real_, nrow = n_stu, ncol = length(all_items), dimnames = list(NULL, all_items)))
@@ -1207,7 +1032,11 @@ server <- function(input, output, session) {
       Y[[nm]] <- sc_bin[[nm]] * w_use[[nm]]
     }
 
-    weighted_total <- rowSums(Y, na.rm = TRUE)
+    # Exam scoring policy: unanswered items receive zero points. Keep NA in
+    # Y/sc_bin for blank counts, but use this matrix for every score statistic.
+    Y_scored <- Y
+    Y_scored[] <- lapply(Y_scored, function(x) replace(x, is.na(x), 0))
+    weighted_total <- rowSums(Y_scored)
     max_weighted <- sum(w_use[intersect(union(mc_tf_bin_names, lc_names), names(w_use))], na.rm = TRUE) +
       sum(w_use[intersect(setdiff(all_items, union(mc_tf_bin_names, lc_names)), names(w_use))], na.rm = TRUE)
 
@@ -1215,14 +1044,14 @@ server <- function(input, output, session) {
     for(nm in all_items){
       mj <- w_use[[nm]]
       if(!is.na(mj) && mj>0){
-        p_all[[nm]] <- mean(Y[[nm]], na.rm = TRUE) / mj
+        p_all[[nm]] <- mean(Y_scored[[nm]]) / mj
       } else p_all[[nm]] <- NA_real_
     }
 
     corrected_item_total <- sapply(seq_len(ncol(Y)), function(j){
-      yj <- Y[[j]]
-      if(all(is.na(yj))) return(NA_real_)
-      examly:::pbiserial_rest(yj, weighted_total - ifelse(is.na(yj), 0, yj))
+      yj <- Y_scored[[j]]
+      if(length(unique(yj)) < 2) return(NA_real_)
+      examly::pbiserial_rest(yj, weighted_total - yj)
     })
     names(corrected_item_total) <- all_items
     rjx <- corrected_item_total
@@ -1239,10 +1068,10 @@ server <- function(input, output, session) {
 
       for(nm in all_items){
         mj <- w_use[[nm]]
-        col_vals <- Y[[nm]]
-        if(!is.na(mj) && mj > 0 && !all(is.na(col_vals))){
-          mean_upper <- mean(col_vals[upper_idx], na.rm=TRUE)
-          mean_lower <- mean(col_vals[lower_idx], na.rm=TRUE)
+        col_vals <- Y_scored[[nm]]
+        if(!is.na(mj) && mj > 0){
+          mean_upper <- mean(col_vals[upper_idx])
+          mean_lower <- mean(col_vals[lower_idx])
           p_upper <- mean_upper / mj
           p_lower <- mean_lower / mj
           ul27_disc[[nm]] <- p_upper - p_lower
@@ -1265,9 +1094,9 @@ server <- function(input, output, session) {
 
     avg_ul27 <- mean(ul27_disc, na.rm = TRUE)
 
-    valid_cols <- which(colSums(!is.na(Y)) > 1)
+    valid_cols <- which(vapply(Y_scored, function(x) length(x) > 1, logical(1)))
     k_eff <- length(valid_cols)
-    col_vars <- if(k_eff>0) sapply(valid_cols, function(j) stats::var(Y[[j]], na.rm = TRUE)) else numeric(0)
+    col_vars <- if(k_eff>0) sapply(valid_cols, function(j) stats::var(Y_scored[[j]])) else numeric(0)
     var_total <- stats::var(weighted_total, na.rm = TRUE)
     total_centered <- weighted_total - mean(weighted_total, na.rm = TRUE)
     total_sd <- stats::sd(weighted_total, na.rm = TRUE)
@@ -1296,7 +1125,7 @@ server <- function(input, output, session) {
     list(
       n_stu = n_stu,
       median = stats::median(weighted_total, na.rm=TRUE),
-      mode   = suppressWarnings(examly:::d_mode(weighted_total)),
+      mode   = suppressWarnings(examly::d_mode(weighted_total)),
       mean   = mean(weighted_total, na.rm=TRUE),
       sd     = stats::sd(weighted_total, na.rm=TRUE),
       skewness = total_skewness,
@@ -1317,6 +1146,7 @@ server <- function(input, output, session) {
       sc_bin = sc_bin,
       lc_raw = lc_raw,
       Y = Y,
+      Y_scored = Y_scored,
       weighted_total = weighted_total,
       max_weighted = max_weighted,
       weights = w_use
@@ -1529,12 +1359,12 @@ server <- function(input, output, session) {
 
   output$avg_p_badge <- renderUI({
     s <- test_summary()
-    HTML(paste(T_("AvgP","Ortalama GÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â§lÃƒÆ’Ã‚Â¼k:"), as.character(examly:::color_badge(s$avg_p, "p"))))
+    HTML(paste(T_("AvgP","Ortalama GÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â§lÃƒÆ’Ã‚Â¼k:"), as.character(examly::color_badge(s$avg_p, "p"))))
   })
 
   output$avg_r_badge <- renderUI({
     s <- test_summary()
-    HTML(paste(T_("AvgR","Ortalama AyÃƒâ€Ã‚Â±rt Edicilik:"), as.character(examly:::color_badge(s$avg_r, "r"))))
+    HTML(paste(T_("AvgR","Ortalama AyÃƒâ€Ã‚Â±rt Edicilik:"), as.character(examly::color_badge(s$avg_r, "r"))))
   })
 
   output$item_stats_table <- renderTable({
@@ -1544,8 +1374,8 @@ server <- function(input, output, session) {
     item_sd  <- apply(Y, 2, stats::sd, na.rm = TRUE)
     item_var <- item_sd^2
 
-    diff_keys <- vapply(p,     examly:::difficulty_label_key,      NA_character_)
-    disc_keys <- vapply(s$rjx, examly:::discrimination_decision_key, NA_character_)
+    diff_keys <- vapply(p,     examly::difficulty_label_key,      NA_character_)
+    disc_keys <- vapply(s$rjx, examly::discrimination_decision_key, NA_character_)
 
     diff_labels <- ifelse(is.na(diff_keys), "",
                           vapply(diff_keys, function(k) T_(k, ""), character(1)))
@@ -1567,7 +1397,7 @@ server <- function(input, output, session) {
       T_("ItemCol",                 "Soru"),
       T_("DifficultyCol",          "GÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â§lÃƒÆ’Ã‚Â¼k (p)"),
       T_("DiscriminationCol",      "AyÃƒâ€Ã‚Â±rt Edicilik (rjx)"),
-      T_("UL27Col",                "AyÃƒâ€Ã‚Â±rt Edicilik (Alt-ÃƒÆ’Ã…â€œst %27)"),
+      T_("UL27Col",                 "Madde Ayırt Ediciliği (Alt-Üst %27)"),
       T_("SD",                     "S.D."),
       T_("VarianceCol",            "Varyans"),
       T_("DifficultyLabelCol",     "Zorluk"),
@@ -1618,7 +1448,7 @@ server <- function(input, output, session) {
       "<tr><td>< 0.20</td><td>", t_vh, "</td></tr>",
       "</table></div>",
       "</div>",
-      "<p style='margin-top:10px; font-style:italic; color:#666;'>* ", t_note, "</p>"
+      "<p style='margin-top:10px; font-style:italic; color:var(--muted);'>* ", t_note, "</p>"
     ))
   })
   # --------------------------------------------
@@ -1626,7 +1456,7 @@ server <- function(input, output, session) {
   mc_raw_norm <- reactive({
     req(mc_items_use()); df <- data_items(); cols <- intersect(names(df), mc_items_use())
     if(length(cols)==0) return(NULL)
-    as.data.frame(lapply(cols, function(nm) examly:::norm_letter(df[[nm]])), stringsAsFactors=FALSE) %>% setNames(cols)
+    as.data.frame(lapply(cols, function(nm) examly::norm_letter(df[[nm]])), stringsAsFactors=FALSE) %>% setNames(cols)
   })
 
   compute_distractor <- function(item_name){
@@ -1682,11 +1512,11 @@ server <- function(input, output, session) {
     dict()
     h <- item_highlights()
     req(h)
-    style_box <- "padding: 10px; border: 1px solid #ddd; border-radius: 5px; background: #f9f9f9; margin-bottom: 8px;"
-    style_label <- "font-weight: bold; color: #333;"
-    style_value_g <- "font-weight: bold; color: #28a745;"
-    style_value_r <- "font-weight: bold; color: #dc3545;"
-    style_value_b <- "font-weight: bold; color: #6c757d;"
+    style_box <- "padding: 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface-muted); margin-bottom: 8px;"
+    style_label <- "font-weight: bold;"
+    style_value_g <- "font-weight: bold; color: var(--positive-text);"
+    style_value_r <- "font-weight: bold; color: var(--negative-text);"
+    style_value_b <- "font-weight: bold; color: var(--muted);"
     create_highlight_box <- function(label_key, default_label, value, count, n_total, style_val) {
       if (is.na(value) || is.null(value)) {
         value_str <- T_("NotApplicable", "N/A")
@@ -1700,7 +1530,7 @@ server <- function(input, output, session) {
         style = style_box,
         tags$span(style = style_label, T_(label_key, default_label), ": "),
         tags$span(style = style_val, value_str),
-        tags$span(style="color: #555;", count_str)
+        tags$span(style = "color: var(--secondary-text);", count_str)
       )
     }
     tagList(
@@ -1771,9 +1601,9 @@ server <- function(input, output, session) {
     outcomes <- item_outcomes()
     has_mc <- length(mcN) > 0; has_tf <- length(tfN) > 0; has_bn <- length(bnN) > 0; has_lc <- length(lcN) > 0
 
-    cnt_mc <- if(has_mc) examly:::student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE]) else NULL
-    cnt_tf <- if(has_tf) examly:::student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE]) else NULL
-    cnt_bn <- if(has_bn) examly:::student_counts(sc_all[, intersect(colnames(sc_all), bnN), drop=FALSE]) else NULL
+    cnt_mc <- if(has_mc) examly::student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE]) else NULL
+    cnt_tf <- if(has_tf) examly::student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE]) else NULL
+    cnt_bn <- if(has_bn) examly::student_counts(sc_all[, intersect(colnames(sc_all), bnN), drop=FALSE]) else NULL
     lc_sum <- if(has_lc) rowSums(lc_all[, intersect(colnames(lc_all), lcN), drop=FALSE], na.rm=TRUE) else rep(0, nrow(sc_all))
 
     yorumlar <- purrr::map_chr(seq_len(nrow(s$sc_bin)), function(i){
@@ -1783,9 +1613,9 @@ server <- function(input, output, session) {
     })
 
     tbl_style <- "width:100%; border-collapse:collapse;"
-    th_style <- "border:1px solid #e5e7eb; padding:8px; background:#f9fafb; text-align:center; font-weight:600;"
-    td_style <- "border:1px solid #e5e7eb; padding:6px; text-align:center;"
-    name_style <- "border:1px solid #e5e7eb; padding:6px; text-align:left;"
+    th_style <- "border:1px solid var(--line); padding:8px; background:var(--table-head); color:var(--table-ink); text-align:center; font-weight:600;"
+    td_style <- "border:1px solid var(--line); padding:6px; text-align:center;"
+    name_style <- "border:1px solid var(--line); padding:6px; text-align:left;"
 
     dict()
     lbl_student   <- T_("StudentsColHeader", "ÃƒÆ’Ã¢â‚¬â€œÃƒâ€Ã…Â¸renci")
@@ -1883,6 +1713,8 @@ server <- function(input, output, session) {
 
   output$student_grade_plot <- renderPlot({
     s_proc <- student_scores_processed(); req(s_proc, nrow(s_proc$df_grades) > 0); dict()
+    theme_name <- input$examly_theme %||% "classic"
+    palette <- grade_plot_palettes[[theme_name]] %||% grade_plot_palettes$classic
     df_plot <- s_proc$df_grades %>%
       dplyr::group_by(Grades) %>%
       dplyr::summarise(Count = n(), .groups = 'drop') %>%
@@ -1893,22 +1725,22 @@ server <- function(input, output, session) {
         Label = ifelse(Count == 0, "", sprintf("%d\n(%.1f%%)", Count, Pct * 100))
       )
     ggplot(df_plot, aes(x = Grades, y = Count, fill = Grades)) +
-      geom_col(width = 0.64, show.legend = FALSE, color = "white", linewidth = 0.8) +
-      geom_text(aes(label = Label), vjust = -0.45, size = 4.2, lineheight = 0.9, fontface = "bold", color = "#162033") +
+      geom_col(width = 0.64, show.legend = FALSE, color = palette[["surface"]], linewidth = 0.8) +
+      geom_text(aes(label = Label), vjust = -0.45, size = 4.2, lineheight = 0.9, fontface = "bold", color = palette[["text"]]) +
       scale_fill_manual(values = c("#dc2626", "#f97316", "#f59e0b", "#22c55e", "#16a34a")[seq_along(levels(df_plot$Grades))]) +
       scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
       labs(title = T_("GradeDistributionTitle", "Puan Kategorilerine GÃƒÆ’Ã‚Â¶re ÃƒÆ’Ã¢â‚¬â€œÃƒâ€Ã…Â¸renci DaÃƒâ€Ã…Â¸Ãƒâ€Ã‚Â±lÃƒâ€Ã‚Â±mÃƒâ€Ã‚Â±"), x = T_("GradeCategory", "Puan Kategorisi"), y = T_("StudentCount", "ÃƒÆ’Ã¢â‚¬â€œÃƒâ€Ã…Â¸renci SayÃƒâ€Ã‚Â±sÃƒâ€Ã‚Â±")) +
       theme_minimal(base_size = 14) +
       theme(
-        plot.background = element_rect(fill = "#f8fafc", color = NA),
-        panel.background = element_rect(fill = "#f8fafc", color = NA),
+        plot.background = element_rect(fill = palette[["surface"]], color = NA),
+        panel.background = element_rect(fill = palette[["surface"]], color = NA),
         panel.grid.major.x = element_blank(),
         panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_line(color = "#dbe4ef", linewidth = 0.35),
-        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 12, face = "bold", color = "#334155"),
-        axis.text.y = element_text(color = "#64748b"),
-        plot.title = element_text(size = 18, face = "bold", color = "#162033", margin = margin(b = 14)),
-        axis.title = element_text(size = 13, face = "bold", color = "#475569")
+        panel.grid.major.y = element_line(color = palette[["grid"]], linewidth = 0.35),
+        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 12, face = "bold", color = palette[["text"]]),
+        axis.text.y = element_text(color = palette[["muted"]]),
+        plot.title = element_text(size = 18, face = "bold", color = palette[["text"]], margin = margin(b = 14)),
+        axis.title = element_text(size = 13, face = "bold", color = palette[["muted"]])
       )
   })
 
@@ -1924,19 +1756,19 @@ server <- function(input, output, session) {
     outcomes <- item_outcomes()
     result_list <- list(); result_list[[col_student]] <- unname(names_vec)
     if (has_mc) {
-      cnt_mc <- examly:::student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE])
+      cnt_mc <- examly::student_counts(sc_all[, intersect(colnames(sc_all), mcN), drop=FALSE])
       result_list[[paste(short_mc, lbl_correct)]] <- unname(cnt_mc$Dogru)
       result_list[[paste(short_mc, lbl_wrong)  ]] <- unname(cnt_mc$Yanlis)
       result_list[[paste(short_mc, lbl_blank)  ]] <- unname(cnt_mc$Bos)
     }
     if (has_tf) {
-      cnt_tf <- examly:::student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE])
+      cnt_tf <- examly::student_counts(sc_all[, intersect(colnames(sc_all), tfN), drop=FALSE])
       result_list[[paste(short_tf, lbl_correct)]] <- unname(cnt_tf$Dogru)
       result_list[[paste(short_tf, lbl_wrong)  ]] <- unname(cnt_tf$Yanlis)
       result_list[[paste(short_tf, lbl_blank)  ]] <- unname(cnt_tf$Bos)
     }
     if (has_bn) {
-      cnt_bn <- examly:::student_counts(sc_all[, intersect(colnames(sc_all), binN), drop=FALSE])
+      cnt_bn <- examly::student_counts(sc_all[, intersect(colnames(sc_all), binN), drop=FALSE])
       result_list[[paste(short_bin, lbl_correct)]] <- unname(cnt_bn$Dogru)
       result_list[[paste(short_bin, lbl_wrong)  ]] <- unname(cnt_bn$Yanlis)
       result_list[[paste(short_bin, lbl_blank)  ]] <- unname(cnt_bn$Bos)
@@ -2103,9 +1935,12 @@ server <- function(input, output, session) {
 
       }, error = function(e) {
         msg <- paste0(T_("ReportError", "Rapor oluÃƒâ€¦Ã…Â¸turulamadÃƒâ€Ã‚Â±. Hata MesajÃƒâ€Ã‚Â±: "), conditionMessage(e))
-        con <- file(file, open = "w", encoding = "UTF-8")
-        on.exit(close(con), add = TRUE)
-        writeLines(msg, con = con)
+        # A download advertised as DOCX must remain a valid Word document even
+        # when generation fails; plain text here produced a corrupt download.
+        error_doc <- officer::read_docx()
+        error_doc <- officer::body_add_par(error_doc, "Report error", style = "heading 1")
+        error_doc <- officer::body_add_par(error_doc, msg)
+        print(error_doc, target = file)
       })
     },
     contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -2125,8 +1960,8 @@ server <- function(input, output, session) {
                  error = function(e) NA_real_)
       })
 
-      diff_keys <- vapply(p,     examly:::difficulty_label_key,        NA_character_)
-      disc_keys <- vapply(s$rjx, examly:::discrimination_decision_key, NA_character_)
+      diff_keys <- vapply(p,     examly::difficulty_label_key,        NA_character_)
+      disc_keys <- vapply(s$rjx, examly::discrimination_decision_key, NA_character_)
 
       diff_labels <- ifelse(is.na(diff_keys), "",
                             vapply(diff_keys, function(k) T_(k, ""), character(1)))
@@ -2149,7 +1984,7 @@ server <- function(input, output, session) {
         T_("ItemCol",            "Soru"),
         T_("DifficultyCol",      "GÃƒÆ’Ã‚Â¼ÃƒÆ’Ã‚Â§lÃƒÆ’Ã‚Â¼k"),
         T_("DiscriminationCol",  "AyÃƒâ€Ã‚Â±rt Edicilik (rjx)"),
-        T_("UL27Col",            "AyÃƒâ€Ã‚Â±rt Edicilik (Alt-ÃƒÆ’Ã…â€œst %27)"),
+        T_("UL27Col",            "Madde Ayırt Ediciliği (Alt-Üst %27)"),
         T_("SD",                 "S.D."),
         T_("VarianceCol",        "Varyans"),
         T_("ItemRelIndexCol",    "Madde GÃƒÆ’Ã‚Â¼venirlik Ãƒâ€Ã‚Â°ndeksi"),

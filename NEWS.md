@@ -1,4 +1,9 @@
-# examly 0.3
+# examly 0.5
+
+* Added Classic, Academic, and Dark themes with a remembered selection.
+* Corrected the upper/lower 27% item discrimination column heading in the item statistics table and report.
+
+# examly 0.4
 
 * Updated the Shiny interface with modern cards, clearer tables, and scrollable panels.
 * Redesigned item type selection into a card-based layout.

@@ -6,6 +6,7 @@ test_that("d_mode() modu doğru buluyor", {
   expect_equal( examly:::d_mode(c(1, 1, 2, 2, 3)) , 1 )
   expect_true( is.na(examly:::d_mode(numeric(0))) )
   expect_true( is.na(examly:::d_mode(c(NA, NA, NA))) )
+  expect_equal(examly:::d_mode(c("a", "b", "a")), "a")
 })
 
 test_that("norm_letter() harfleri temizliyor ve doğruluyor", {
@@ -58,6 +59,7 @@ test_that("is_scored_01() 1-0 kodlu sütunları algılıyor", {
   expect_true( examly:::is_scored_01(c("1", "0", "1", NA)) )
   expect_false( examly:::is_scored_01(c(1, 0, 2, 0)) )
   expect_false( examly:::is_scored_01(c("A", "B", "C")) )
+  expect_false( examly:::is_scored_01(c("1", "0", "hatalı")) )
   expect_false( examly:::is_scored_01(numeric(0)) )
 })
 

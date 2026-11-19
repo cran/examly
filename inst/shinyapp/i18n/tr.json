@@ -1,4 +1,8 @@
 {
+  "Theme": "Tema",
+  "ThemeClassic": "Klasik",
+  "ThemeAcademic": "Akademik",
+  "ThemeDark": "Koyu",
   "AppTitle": "examly: Statistical Metrics and Reporting Tool",
   "LanguageSelection": "Dil Seçimi",
   "UploadTab": "Veri Yükleme",
@@ -206,7 +210,7 @@
   "WaitingForScores": "Puanlar hesaplanıyor...",
   "SelectAll": "Tümünü Seç",
 "DistributeWeights": "Puanları 100 Üzerinden Eşit Dağıt",
-"UL27Col": "Ortalama Madde Ayırt Ediciliği (Alt-Üst %27)",
+"UL27Col": "Madde Ayırt Ediciliği (Alt-Üst %27)",
 "ReportHead.ItemStats": "Madde İstatistikleri",
 "ReportHead.Distractor": "Çeldirici Analizi",
 "ReportHead.Summary": "Test Özeti İstatistikleri",
